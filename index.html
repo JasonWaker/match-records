@@ -635,6 +635,23 @@
 
                         <div class="card">
                             <div class="card-header">
+                                <h2 class="card-title"><i class="fa fa-exchange"></i>数据同步</h2>
+                                <span class="badge badge-muted">跨设备</span>
+                            </div>
+                            <div class="card-body stack-sm">
+                                <p class="muted-line">电脑和手机浏览器的本地数据不会自动互通。可在电脑导出或复制同步码，在手机导入或粘贴同步码。</p>
+                                <div class="actions" style="justify-content:flex-start;">
+                                    <button type="button" id="export-data-btn" class="btn btn-primary"><i class="fa fa-download"></i>导出数据</button>
+                                    <button type="button" id="import-data-btn" class="btn btn-default"><i class="fa fa-upload"></i>导入数据</button>
+                                    <button type="button" id="copy-sync-code-btn" class="btn btn-default"><i class="fa fa-copy"></i>复制同步码</button>
+                                    <button type="button" id="paste-sync-code-btn" class="btn btn-default"><i class="fa fa-paste"></i>粘贴同步码</button>
+                                    <input type="file" id="import-data-file" accept="application/json,.json" class="hidden">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
                                 <h2 class="card-title"><i class="fa fa-table"></i>历史投注记录</h2>
                                 <button type="button" id="clear-data-btn" class="btn btn-danger"><i class="fa fa-trash"></i>清空数据</button>
                             </div>
@@ -828,6 +845,11 @@
             document.getElementById('generate-analysis-btn').addEventListener('click', generateAIAnalysis);
             document.getElementById('clear-predict-history-btn').addEventListener('click', clearPredictHistory);
             document.getElementById('cancel-edit-btn').addEventListener('click', cancelEditRecord);
+            document.getElementById('export-data-btn').addEventListener('click', exportAllData);
+            document.getElementById('import-data-btn').addEventListener('click', () => document.getElementById('import-data-file').click());
+            document.getElementById('import-data-file').addEventListener('change', importDataFromFile);
+            document.getElementById('copy-sync-code-btn').addEventListener('click', copySyncCode);
+            document.getElementById('paste-sync-code-btn').addEventListener('click', pasteSyncCode);
             document.querySelectorAll('.segment-btn[data-scope]').forEach(btn => {
                 btn.addEventListener('click', function () {
                     setAnalysisScope(this.dataset.scope);
@@ -1251,6 +1273,125 @@
             predictHistory = [];
             localStorage.removeItem('predictHistory');
             renderPredictHistory();
+        }
+
+        function buildDataSnapshot() {
+            return {
+                version: 2,
+                exportedAt: new Date().toISOString(),
+                betData,
+                predictHistory
+            };
+        }
+
+        function exportAllData() {
+            const snapshot = buildDataSnapshot();
+            const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `球赛投注数据-${date}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function importDataFromFile(e) {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    const snapshot = JSON.parse(String(reader.result || '{}'));
+                    applyImportedData(snapshot);
+                } catch (err) {
+                    alert('导入失败：文件格式不正确。');
+                } finally {
+                    e.target.value = '';
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        async function copySyncCode() {
+            const code = encodeSyncCode(buildDataSnapshot());
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(code);
+                    alert('同步码已复制。请在手机页面点击“粘贴同步码”导入。');
+                } else {
+                    prompt('复制下面的同步码，在手机页面粘贴导入：', code);
+                }
+            } catch (err) {
+                prompt('复制下面的同步码，在手机页面粘贴导入：', code);
+            }
+        }
+
+        async function pasteSyncCode() {
+            let code = '';
+            try {
+                if (navigator.clipboard?.readText) code = await navigator.clipboard.readText();
+            } catch (err) {
+                code = '';
+            }
+            code = prompt('粘贴从电脑页面复制的同步码：', code || '') || '';
+            if (!code.trim()) return;
+            try {
+                applyImportedData(decodeSyncCode(code.trim()));
+            } catch (err) {
+                alert('同步码无效，请重新复制后再试。');
+            }
+        }
+
+        function applyImportedData(snapshot) {
+            if (!Array.isArray(snapshot.betData)) {
+                alert('导入失败：没有找到投注记录数据。');
+                return;
+            }
+            if (!confirm('导入会覆盖当前浏览器中的投注记录和预测历史，确定继续？')) return;
+            betData = snapshot.betData.map(normalizeRecord).filter(Boolean);
+            predictHistory = Array.isArray(snapshot.predictHistory) ? snapshot.predictHistory : [];
+            saveData();
+            localStorage.setItem('predictHistory', JSON.stringify(predictHistory));
+            resetBetForm();
+            setVal('filter-start-date', '');
+            setVal('filter-end-date', '');
+            document.getElementById('filter-tip').textContent = '全部记录';
+            filteredData = [...betData];
+            initChartDefaultDate();
+            refreshRecordFilter(false);
+            renderAll();
+            alert(`导入成功：${betData.length} 条投注记录，${predictHistory.length} 条预测历史。`);
+        }
+
+        function normalizeRecord(record) {
+            if (!record || !record.date) return null;
+            return {
+                id: Number(record.id || Date.now() + Math.random()),
+                date: String(record.date || ''),
+                sport: normalizeSport(record.sport),
+                match: String(record.match || ''),
+                betType: String(record.betType || ''),
+                betSource: String(record.betSource || ''),
+                amount: Number(record.amount || 0),
+                result: ['win', 'lose', 'draw'].includes(record.result) ? record.result : 'draw',
+                profit: Number(record.profit || 0)
+            };
+        }
+
+        function encodeSyncCode(snapshot) {
+            const bytes = new TextEncoder().encode(JSON.stringify(snapshot));
+            let binary = '';
+            bytes.forEach(byte => binary += String.fromCharCode(byte));
+            return btoa(binary);
+        }
+
+        function decodeSyncCode(code) {
+            const binary = atob(code);
+            const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+            return JSON.parse(new TextDecoder().decode(bytes));
         }
 
         function setAnalysisScope(scope) {
