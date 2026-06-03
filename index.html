@@ -320,6 +320,33 @@
             border-radius: 10px;
         }
 
+        .segment {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--surface-soft);
+        }
+
+        .segment-btn {
+            min-height: 32px;
+            border: 0;
+            border-radius: 9px;
+            padding: 6px 11px;
+            background: transparent;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .segment-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+        }
+
         .filter-row {
             display: grid;
             grid-template-columns: repeat(2, minmax(160px, 1fr)) auto auto;
@@ -505,6 +532,8 @@
             .topbar { align-items: stretch; flex-direction: column; }
             .balance-pill { min-width: 0; }
             .kpi-grid, .chart-grid, .insight-grid, .score-grid, .form-grid, .form-grid-3, .filter-row { grid-template-columns: 1fr; }
+            .segment { width: 100%; justify-content: stretch; }
+            .segment-btn { flex: 1; }
             .actions { justify-content: stretch; }
             .actions .btn { width: 100%; }
         }
@@ -568,18 +597,22 @@
                 <div class="section-grid">
                     <div class="card">
                         <div class="card-header">
-                            <h2 class="card-title"><i class="fa fa-pencil-square-o"></i>新增投注</h2>
+                            <h2 class="card-title" id="bet-form-title"><i class="fa fa-pencil-square-o"></i>新增投注</h2>
                         </div>
                         <div class="card-body">
                             <form id="bet-form" class="form-grid">
                                 <div class="field"><label for="bet-date">日期</label><input type="date" id="bet-date" required></div>
+                                <div class="field"><label for="bet-sport">比赛类型</label><select id="bet-sport" required><option value="football">足球</option><option value="basketball">篮球</option></select></div>
                                 <div class="field"><label for="bet-result">结果</label><select id="bet-result" required><option value="win">赢</option><option value="lose">输</option><option value="draw">走水</option></select></div>
                                 <div class="field full"><label for="bet-match">赛事名称</label><input type="text" id="bet-match" placeholder="例如：英超 曼联VS曼城" required></div>
                                 <div class="field"><label for="bet-type">下注类型</label><input type="text" id="bet-type" placeholder="例如：主胜 / 大2.5" required></div>
                                 <div class="field"><label for="bet-source">注单来源</label><input type="text" id="bet-source" placeholder="例如：专家A / 自己分析" required></div>
                                 <div class="field"><label for="bet-amount">投注金额</label><input type="number" id="bet-amount" min="0" step="0.01" required></div>
                                 <div class="field"><label for="bet-profit">盈亏金额</label><input type="number" id="bet-profit" step="0.01" required></div>
-                                <div class="field full actions"><button type="submit" class="btn btn-primary"><i class="fa fa-plus-circle"></i>保存记录</button></div>
+                                <div class="field full actions">
+                                    <button type="button" id="cancel-edit-btn" class="btn btn-default hidden"><i class="fa fa-times"></i>取消编辑</button>
+                                    <button type="submit" id="save-record-btn" class="btn btn-primary"><i class="fa fa-plus-circle"></i>保存记录</button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -607,8 +640,8 @@
                             </div>
                             <div class="table-wrap">
                                 <table>
-                                    <thead><tr><th>日期</th><th>赛事</th><th>下注类型</th><th>来源</th><th>金额</th><th>结果</th><th>盈亏</th><th>操作</th></tr></thead>
-                                    <tbody id="bet-list"><tr><td colspan="8" style="text-align:center;color:#64748b;">暂无投注记录</td></tr></tbody>
+                                    <thead><tr><th>日期</th><th>类型</th><th>赛事</th><th>下注类型</th><th>来源</th><th>金额</th><th>结果</th><th>盈亏</th><th>操作</th></tr></thead>
+                                    <tbody id="bet-list"><tr><td colspan="9" style="text-align:center;color:#64748b;">暂无投注记录</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
@@ -621,9 +654,14 @@
                     <div class="card">
                         <div class="card-header">
                             <h2 class="card-title"><i class="fa fa-sliders"></i>图表区间</h2>
-                            <span id="chart-filter-tip" class="badge badge-muted">全部数据</span>
+                            <div class="segment" aria-label="图表分析范围">
+                                <button type="button" class="segment-btn active" data-scope="all">合计</button>
+                                <button type="button" class="segment-btn" data-scope="football">足球</button>
+                                <button type="button" class="segment-btn" data-scope="basketball">篮球</button>
+                            </div>
                         </div>
                         <div class="card-body">
+                            <div style="margin-bottom:14px;"><span id="chart-filter-tip" class="badge badge-muted">全部数据</span></div>
                             <div class="filter-row">
                                 <div class="field"><label for="chart-start-date">开始日期</label><input type="date" id="chart-start-date"></div>
                                 <div class="field"><label for="chart-end-date">结束日期</label><input type="date" id="chart-end-date"></div>
@@ -652,9 +690,16 @@
             <section id="ai-analysis-tab" class="tab-panel hidden">
                 <div class="section-grid">
                     <div class="card">
-                        <div class="card-header"><h2 class="card-title"><i class="fa fa-rocket"></i>AI智能分析</h2></div>
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fa fa-rocket"></i>AI智能分析</h2>
+                            <div class="segment" aria-label="AI分析范围">
+                                <button type="button" class="segment-btn active" data-scope="all">合计</button>
+                                <button type="button" class="segment-btn" data-scope="football">足球</button>
+                                <button type="button" class="segment-btn" data-scope="basketball">篮球</button>
+                            </div>
+                        </div>
                         <div class="card-body stack-sm">
-                            <p class="muted-line">系统会从近期状态、投注方向、注单来源、关键词盈亏和资金表现中提取复盘结论。</p>
+                            <p class="muted-line">系统会按当前范围从近期状态、投注方向、注单来源、关键词盈亏和资金表现中提取复盘结论。</p>
                             <button type="button" id="generate-analysis-btn" class="btn btn-primary"><i class="fa fa-magic"></i>生成AI分析报告</button>
                         </div>
                     </div>
@@ -691,7 +736,14 @@
                 <div class="stack">
                     <div class="card">
                         <div class="predict-hero">
-                            <h2 class="card-title"><i class="fa fa-magic"></i>AI赛事预测中心 <span class="badge badge-primary">复合模型 V2.0</span></h2>
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                                <h2 class="card-title"><i class="fa fa-magic"></i>AI赛事预测中心 <span class="badge badge-primary">复合模型 V2.0</span></h2>
+                                <div class="segment" aria-label="AI预测范围">
+                                    <button type="button" class="segment-btn active" data-scope="all">合计</button>
+                                    <button type="button" class="segment-btn" data-scope="football">足球</button>
+                                    <button type="button" class="segment-btn" data-scope="basketball">篮球</button>
+                                </div>
+                            </div>
                             <p class="muted-line" style="margin-top:8px;">综合整体胜率、玩法胜率、赛事相似度、盈亏稳定性和近期状态，形成个人数据模型。</p>
                         </div>
                         <div class="card-body">
@@ -730,8 +782,8 @@
                         </div>
                         <div class="table-wrap">
                             <table>
-                                <thead><tr><th>时间</th><th>赛事</th><th>玩法</th><th>信心</th><th>结论</th><th>风险</th><th>爆冷</th></tr></thead>
-                                <tbody id="predict-history"><tr><td colspan="7" style="text-align:center;color:#64748b;">暂无预测记录</td></tr></tbody>
+                                <thead><tr><th>时间</th><th>范围</th><th>赛事</th><th>玩法</th><th>信心</th><th>结论</th><th>风险</th><th>爆冷</th></tr></thead>
+                                <tbody id="predict-history"><tr><td colspan="8" style="text-align:center;color:#64748b;">暂无预测记录</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -748,6 +800,8 @@
         let chartFilteredData = [];
         let predictHistory = [];
         let profitChart, resultChart, monthlyChart, sourceChart;
+        let activeAnalysisScope = 'all';
+        let editingRecordId = null;
 
         const MODEL_WEIGHT = { totalWinRate: 0.20, typeWinRate: 0.30, matchSimilar: 0.20, profitStable: 0.15, recentState: 0.15 };
         const pageCopy = {
@@ -773,13 +827,21 @@
             document.getElementById('clear-data-btn').addEventListener('click', clearAllData);
             document.getElementById('generate-analysis-btn').addEventListener('click', generateAIAnalysis);
             document.getElementById('clear-predict-history-btn').addEventListener('click', clearPredictHistory);
+            document.getElementById('cancel-edit-btn').addEventListener('click', cancelEditRecord);
+            document.querySelectorAll('.segment-btn[data-scope]').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    setAnalysisScope(this.dataset.scope);
+                });
+            });
             document.querySelector('.nav-list').addEventListener('click', function (e) {
                 const btn = e.target.closest('button[data-tab]');
                 if (btn) switchTab(btn.dataset.tab);
             });
             document.getElementById('bet-list').addEventListener('click', function (e) {
-                const btn = e.target.closest('button[data-delete-id]');
-                if (btn) deleteRecord(Number(btn.dataset.deleteId));
+                const editBtn = e.target.closest('button[data-edit-id]');
+                const deleteBtn = e.target.closest('button[data-delete-id]');
+                if (editBtn) editRecord(Number(editBtn.dataset.editId));
+                if (deleteBtn) deleteRecord(Number(deleteBtn.dataset.deleteId));
             });
 
             initChartDefaultDate();
@@ -801,9 +863,25 @@
 
         function saveBetRecord(e) {
             e.preventDefault();
-            const record = {
-                id: Date.now(),
+            const formData = getBetFormData();
+            const wasEditing = editingRecordId !== null;
+            if (editingRecordId !== null) {
+                betData = betData.map(record => record.id === editingRecordId ? { ...formData, id: editingRecordId } : record);
+            } else {
+                betData.unshift({ ...formData, id: Date.now() });
+            }
+            saveData();
+            resetBetForm();
+            initChartDefaultDate();
+            refreshRecordFilter(false);
+            renderAll();
+            alert(wasEditing ? '更新成功！' : '保存成功！');
+        }
+
+        function getBetFormData() {
+            return {
                 date: val('bet-date'),
+                sport: val('bet-sport'),
                 match: val('bet-match').trim(),
                 betType: val('bet-type').trim(),
                 betSource: val('bet-source').trim(),
@@ -811,15 +889,6 @@
                 result: val('bet-result'),
                 profit: Number(val('bet-profit'))
             };
-            betData.unshift(record);
-            filteredData = [...betData];
-            chartFilteredData = [...betData];
-            saveData();
-            document.getElementById('bet-form').reset();
-            document.getElementById('bet-date').valueAsDate = new Date();
-            initChartDefaultDate();
-            renderAll();
-            alert('保存成功！');
         }
 
         function renderAll() {
@@ -831,10 +900,14 @@
         }
 
         function filterByDate() {
+            refreshRecordFilter(true);
+        }
+
+        function refreshRecordFilter(updateTip) {
             const s = val('filter-start-date');
             const e = val('filter-end-date');
             filteredData = betData.filter(i => (!s || i.date >= s) && (!e || i.date <= e));
-            document.getElementById('filter-tip').textContent = `已筛选 ${filteredData.length} 条`;
+            if (updateTip) document.getElementById('filter-tip').textContent = `已筛选 ${filteredData.length} 条`;
             renderBetList();
         }
 
@@ -849,11 +922,12 @@
         function filterChartByDate(updateTip = true) {
             const s = val('chart-start-date');
             const e = val('chart-end-date');
-            chartFilteredData = betData.filter(i => (!s || i.date >= s) && (!e || i.date <= e));
+            chartFilteredData = getScopeData().filter(i => (!s || i.date >= s) && (!e || i.date <= e));
             updateCharts();
             updateChartStats();
-            if (updateTip) document.getElementById('chart-filter-tip').textContent = `${s || '最早'} ~ ${e || '今天'} · ${chartFilteredData.length}条`;
-            else document.getElementById('chart-filter-tip').textContent = chartFilteredData.length ? `${s || '最早'} ~ ${e || '今天'} · ${chartFilteredData.length}条` : '暂无数据';
+            const scopeLabel = getScopeLabel(activeAnalysisScope);
+            if (updateTip) document.getElementById('chart-filter-tip').textContent = `${scopeLabel} · ${s || '最早'} ~ ${e || '今天'} · ${chartFilteredData.length}条`;
+            else document.getElementById('chart-filter-tip').textContent = chartFilteredData.length ? `${scopeLabel} · ${s || '最早'} ~ ${e || '今天'} · ${chartFilteredData.length}条` : `${scopeLabel} · 暂无数据`;
         }
 
         function resetChartFilter() {
@@ -864,21 +938,58 @@
         function renderBetList() {
             const el = document.getElementById('bet-list');
             if (!filteredData.length) {
-                el.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;">暂无投注记录</td></tr>';
+                el.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#64748b;">暂无投注记录</td></tr>';
                 return;
             }
             el.innerHTML = filteredData.map(r => `
                 <tr>
                     <td>${escapeHTML(r.date)}</td>
+                    <td>${sportBadge(r.sport)}</td>
                     <td>${escapeHTML(r.match)}</td>
                     <td>${escapeHTML(r.betType)}</td>
                     <td>${escapeHTML(r.betSource)}</td>
                     <td>¥${money(r.amount)}</td>
                     <td>${resultBadge(r.result)}</td>
                     <td class="${r.profit > 0 ? 'text-success' : r.profit < 0 ? 'text-danger' : ''}">¥${money(r.profit)}</td>
-                    <td><button type="button" class="btn btn-ghost btn-icon" data-delete-id="${r.id}" title="删除"><i class="fa fa-trash text-danger"></i></button></td>
+                    <td>
+                        <button type="button" class="btn btn-ghost btn-icon" data-edit-id="${r.id}" title="编辑"><i class="fa fa-pencil text-primary"></i></button>
+                        <button type="button" class="btn btn-ghost btn-icon" data-delete-id="${r.id}" title="删除"><i class="fa fa-trash text-danger"></i></button>
+                    </td>
                 </tr>
             `).join('');
+        }
+
+        function editRecord(id) {
+            const record = betData.find(r => r.id === id);
+            if (!record) return;
+            editingRecordId = id;
+            setVal('bet-date', record.date);
+            setVal('bet-sport', normalizeSport(record.sport));
+            setVal('bet-result', record.result);
+            setVal('bet-match', record.match);
+            setVal('bet-type', record.betType);
+            setVal('bet-source', record.betSource);
+            setVal('bet-amount', record.amount);
+            setVal('bet-profit', record.profit);
+            document.getElementById('bet-form-title').innerHTML = '<i class="fa fa-pencil-square-o"></i>编辑投注';
+            document.getElementById('save-record-btn').innerHTML = '<i class="fa fa-save"></i>更新记录';
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+            switchTab('record');
+            document.getElementById('bet-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function cancelEditRecord() {
+            resetBetForm();
+        }
+
+        function resetBetForm() {
+            editingRecordId = null;
+            document.getElementById('bet-form').reset();
+            document.getElementById('bet-date').valueAsDate = new Date();
+            setVal('bet-sport', 'football');
+            document.getElementById('bet-form-title').innerHTML = '<i class="fa fa-pencil-square-o"></i>新增投注';
+            document.getElementById('save-record-btn').innerHTML = '<i class="fa fa-plus-circle"></i>保存记录';
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
         }
 
         function deleteRecord(id) {
@@ -886,6 +997,7 @@
             betData = betData.filter(r => r.id !== id);
             filteredData = filteredData.filter(r => r.id !== id);
             chartFilteredData = chartFilteredData.filter(r => r.id !== id);
+            if (editingRecordId === id) resetBetForm();
             saveData();
             initChartDefaultDate();
             renderAll();
@@ -931,8 +1043,9 @@
         function initChartDefaultDate() {
             const today = new Date().toISOString().split('T')[0];
             setVal('chart-end-date', today);
-            if (betData.length) {
-                const sorted = [...betData].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const data = getScopeData();
+            if (data.length) {
+                const sorted = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
                 setVal('chart-start-date', sorted[0].date);
             } else setVal('chart-start-date', '');
         }
@@ -982,49 +1095,62 @@
             monthlyChart.update();
         }
 
-        function generateAIAnalysis() {
-            if (betData.length < 3) {
-                alert('至少3条记录才能分析');
+        function generateAIAnalysis(silent = false) {
+            const data = getScopeData();
+            const scopeLabel = getScopeLabel(activeAnalysisScope);
+            if (data.length < 3) {
+                if (!silent) alert(`${scopeLabel}至少3条记录才能分析`);
+                if (silent) {
+                    setText('profit-analysis', `${scopeLabel}记录不足，至少需要3条记录。`);
+                    setText('bet-type-analysis', '暂无足够数据。');
+                    setText('bet-source-analysis', '暂无足够数据。');
+                    setText('win-rate-analysis', '暂无足够数据。');
+                    document.getElementById('keyword-analysis').innerHTML = '<p>暂无足够数据。</p>';
+                    setText('ai-suggestion', '继续记录该类型赛事后，可生成更细分的分析建议。');
+                }
                 return;
             }
             document.getElementById('ai-analysis-content').classList.remove('hidden');
             updateAnalysisSummary();
             const weekAgo = new Date(Date.now() - 7 * 86400000);
-            const recent = betData.filter(r => new Date(r.date) >= weekAgo);
+            const recent = data.filter(r => new Date(r.date) >= weekAgo);
             const weekProfit = sumProfit(recent);
-            const totalProfit = sumProfit(betData);
-            const win = betData.filter(r => r.result === 'win').length;
-            const typeProfit = sumProfitBy(betData, 'betType');
-            const sourceProfit = sumProfitBy(betData, 'betSource');
-            const matchProfit = sumProfitBy(betData, 'match');
+            const totalProfit = sumProfit(data);
+            const win = data.filter(r => r.result === 'win').length;
+            const typeProfit = sumProfitBy(data, 'betType');
+            const sourceProfit = sumProfitBy(data, 'betSource');
+            const matchProfit = sumProfitBy(data, 'match');
 
-            setText('profit-analysis', recent.length ? `近7天共 ${recent.length} 单，${weekProfit >= 0 ? '盈利' : '亏损'} ¥${money(Math.abs(weekProfit))}。` : '近7天暂无投注记录，建议保持稳定记录频率。');
-            setText('bet-type-analysis', `最常用玩法是 ${topKey(countBy(betData, 'betType')) || '无'}，当前收益最好的玩法是 ${topKey(typeProfit) || '无'}。`);
-            setText('bet-source-analysis', `最常跟单来源是 ${topKey(countBy(betData, 'betSource')) || '无'}，累计收益最好的来源是 ${topKey(sourceProfit) || '无'}。`);
-            setText('win-rate-analysis', `共 ${betData.length} 场，胜率 ${betData.length ? (win / betData.length * 100).toFixed(1) : 0}%，累计${totalProfit >= 0 ? '盈利' : '亏损'} ¥${money(Math.abs(totalProfit))}。`);
+            setText('profit-analysis', recent.length ? `${scopeLabel}近7天共 ${recent.length} 单，${weekProfit >= 0 ? '盈利' : '亏损'} ¥${money(Math.abs(weekProfit))}。` : `${scopeLabel}近7天暂无投注记录，建议保持稳定记录频率。`);
+            setText('bet-type-analysis', `${scopeLabel}最常用玩法是 ${topKey(countBy(data, 'betType')) || '无'}，当前收益最好的玩法是 ${topKey(typeProfit) || '无'}。`);
+            setText('bet-source-analysis', `${scopeLabel}最常跟单来源是 ${topKey(countBy(data, 'betSource')) || '无'}，累计收益最好的来源是 ${topKey(sourceProfit) || '无'}。`);
+            setText('win-rate-analysis', `${scopeLabel}共 ${data.length} 场，胜率 ${data.length ? (win / data.length * 100).toFixed(1) : 0}%，累计${totalProfit >= 0 ? '盈利' : '亏损'} ¥${money(Math.abs(totalProfit))}。`);
             document.getElementById('keyword-analysis').innerHTML = `
                 <p>球队/赛事：盈利最多 ${escapeHTML(topKey(matchProfit) || '无')}；亏损最多 ${escapeHTML(bottomKey(matchProfit) || '无')}</p>
                 <p>投注方向：盈利最多 ${escapeHTML(topKey(typeProfit) || '无')}；亏损最多 ${escapeHTML(bottomKey(typeProfit) || '无')}</p>
                 <p>注单来源：收益最好 ${escapeHTML(topKey(sourceProfit) || '无')}；亏损最多 ${escapeHTML(bottomKey(sourceProfit) || '无')}</p>
             `;
-            setText('ai-suggestion', '优先保留长期正收益的赛事类型、投注方向和来源；对连续亏损的方向降低仓位，避免因为单场判断扩大风险。');
+            setText('ai-suggestion', `${scopeLabel}视角下，优先保留长期正收益的赛事类型、投注方向和来源；对连续亏损的方向降低仓位，避免因为单场判断扩大风险。`);
         }
 
         function updateAnalysisSummary() {
+            const data = getScopeData();
             const weekAgo = new Date(Date.now() - 7 * 86400000);
-            const recent = betData.filter(r => new Date(r.date) >= weekAgo);
+            const recent = data.filter(r => new Date(r.date) >= weekAgo);
             setText('week-bet-count', recent.length);
             setText('week-profit', `¥${money(sumProfit(recent))}`);
-            setText('common-bet-type', topKey(countBy(betData, 'betType')) || '无数据');
-            setText('best-day-profit', `¥${money(bestDailyProfit(betData))}`);
-            setText('best-source', topKey(sumProfitBy(betData, 'betSource')) || '无数据');
-            setText('common-source', topKey(countBy(betData, 'betSource')) || '无数据');
+            setText('common-bet-type', topKey(countBy(data, 'betType')) || '无数据');
+            setText('best-day-profit', `¥${money(bestDailyProfit(data))}`);
+            setText('best-source', topKey(sumProfitBy(data, 'betSource')) || '无数据');
+            setText('common-source', topKey(countBy(data, 'betSource')) || '无数据');
         }
 
         function startAIPredict(e) {
             e.preventDefault();
-            if (betData.length < 5) {
-                alert('模型需要至少5条历史投注记录才能运算，请先补充数据！');
+            const modelData = getScopeData();
+            const scopeLabel = getScopeLabel(activeAnalysisScope);
+            if (modelData.length < 5) {
+                alert(`${scopeLabel}模型需要至少5条历史投注记录才能运算，请先补充数据！`);
                 return;
             }
             const league = val('predict-league').trim();
@@ -1032,23 +1158,23 @@
             const away = val('predict-away').trim();
             const predictType = val('predict-type');
             const amount = Number(val('predict-amount') || 0);
-            const result = runNewPredictModel(league, home, away, predictType, new Date(Date.now() - 7 * 86400000));
+            const result = runNewPredictModel(modelData, league, home, away, predictType, new Date(Date.now() - 7 * 86400000));
             renderPredictUI(result, amount);
-            savePredictHistory({ time: new Date().toLocaleString(), match: `${home}VS${away}`, type: getPredictTypeText(predictType), confidence: result.confidence, result: result.resultText, risk: result.riskText, upset: result.upsetRate });
+            savePredictHistory({ time: new Date().toLocaleString(), scope: scopeLabel, match: `${home}VS${away}`, type: getPredictTypeText(predictType), confidence: result.confidence, result: result.resultText, risk: result.riskText, upset: result.upsetRate });
             alert('AI复合模型 V2.0 运算完成！');
         }
 
-        function runNewPredictModel(league, home, away, predictType, sevenDayAgo) {
+        function runNewPredictModel(modelData, league, home, away, predictType, sevenDayAgo) {
             const typeText = getPredictTypeText(predictType);
-            const totalCount = betData.length;
-            const totalWin = betData.filter(d => d.result === 'win').length;
-            const typeList = betData.filter(d => d.betType.includes(typeText));
+            const totalCount = modelData.length;
+            const totalWin = modelData.filter(d => d.result === 'win').length;
+            const typeList = modelData.filter(d => d.betType.includes(typeText));
             const typeWin = typeList.filter(d => d.result === 'win').length;
-            const similarCount = betData.filter(d => d.match.includes(league) || d.match.includes(home) || d.match.includes(away)).length;
-            const profits = betData.map(d => Number(d.profit || 0));
+            const similarCount = modelData.filter(d => d.match.includes(league) || d.match.includes(home) || d.match.includes(away)).length;
+            const profits = modelData.map(d => Number(d.profit || 0));
             const avgProfit = profits.reduce((a, b) => a + b, 0) / profits.length;
             const variance = profits.reduce((s, p) => s + Math.pow(p - avgProfit, 2), 0) / profits.length;
-            const recent = betData.filter(d => new Date(d.date) >= sevenDayAgo);
+            const recent = modelData.filter(d => new Date(d.date) >= sevenDayAgo);
             const recentWin = recent.filter(d => d.result === 'win').length;
             const factor = {
                 totalWinRate: totalCount ? totalWin / totalCount * 100 : 50,
@@ -1114,10 +1240,10 @@
         function renderPredictHistory() {
             const el = document.getElementById('predict-history');
             if (!predictHistory.length) {
-                el.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;">暂无预测记录</td></tr>';
+                el.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;">暂无预测记录</td></tr>';
                 return;
             }
-            el.innerHTML = predictHistory.map(r => `<tr><td>${escapeHTML(r.time)}</td><td>${escapeHTML(r.match)}</td><td>${escapeHTML(r.type)}</td><td>${r.confidence}%</td><td>${escapeHTML(r.result)}</td><td>${escapeHTML(r.risk)}</td><td>${r.upset}%</td></tr>`).join('');
+            el.innerHTML = predictHistory.map(r => `<tr><td>${escapeHTML(r.time)}</td><td>${escapeHTML(r.scope || '合计')}</td><td>${escapeHTML(r.match)}</td><td>${escapeHTML(r.type)}</td><td>${r.confidence}%</td><td>${escapeHTML(r.result)}</td><td>${escapeHTML(r.risk)}</td><td>${r.upset}%</td></tr>`).join('');
         }
 
         function clearPredictHistory() {
@@ -1127,8 +1253,49 @@
             renderPredictHistory();
         }
 
+        function setAnalysisScope(scope) {
+            activeAnalysisScope = scope;
+            document.querySelectorAll('.segment-btn[data-scope]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.scope === scope);
+            });
+            initChartDefaultDate();
+            filterChartByDate(false);
+            updateAnalysisSummary();
+            document.getElementById('predict-result').classList.add('hidden');
+            if (!document.getElementById('ai-analysis-content').classList.contains('hidden')) {
+                generateAIAnalysis(true);
+            }
+        }
+
+        function getScopeData() {
+            if (activeAnalysisScope === 'all') return betData;
+            return betData.filter(r => normalizeSport(r.sport) === activeAnalysisScope);
+        }
+
+        function normalizeSport(sport) {
+            return sport === 'basketball' ? 'basketball' : 'football';
+        }
+
+        function getScopeLabel(scope) {
+            return { all: '合计', football: '足球', basketball: '篮球' }[scope] || '合计';
+        }
+
+        function getSportLabel(sport) {
+            return { football: '足球', basketball: '篮球' }[normalizeSport(sport)] || '足球';
+        }
+
+        function sportBadge(sport) {
+            const normalized = normalizeSport(sport);
+            const cls = normalized === 'basketball' ? 'badge-warning' : 'badge-primary';
+            return `<span class="badge ${cls}">${getSportLabel(normalized)}</span>`;
+        }
+
         function saveData() { localStorage.setItem('betData', JSON.stringify(betData)); }
-        function loadData() { const d = localStorage.getItem('betData'); if (d) betData = JSON.parse(d); }
+        function loadData() {
+            const d = localStorage.getItem('betData');
+            if (d) betData = JSON.parse(d);
+            betData = betData.map(r => ({ ...r, sport: normalizeSport(r.sport) }));
+        }
         function val(id) { return document.getElementById(id).value; }
         function setVal(id, value) { document.getElementById(id).value = value; }
         function setText(id, value) { document.getElementById(id).textContent = value; }
