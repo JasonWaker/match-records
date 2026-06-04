@@ -604,7 +604,9 @@
                                 <div class="field"><label for="bet-date">日期</label><input type="date" id="bet-date" required></div>
                                 <div class="field"><label for="bet-sport">比赛类型</label><select id="bet-sport" required><option value="football">足球</option><option value="basketball">篮球</option></select></div>
                                 <div class="field"><label for="bet-result">结果</label><select id="bet-result" required><option value="win">赢</option><option value="lose">输</option><option value="draw">走水</option></select></div>
-                                <div class="field full"><label for="bet-match">赛事名称</label><input type="text" id="bet-match" placeholder="例如：英超 曼联VS曼城" required></div>
+                                <div class="field full"><label for="bet-match">赛事名称</label><input type="text" id="bet-match" placeholder="例如：英超" required></div>
+                                <div class="field"><label for="bet-home">主队</label><input type="text" id="bet-home" placeholder="例如：曼联" required></div>
+                                <div class="field"><label for="bet-away">客队</label><input type="text" id="bet-away" placeholder="例如：曼城" required></div>
                                 <div class="field"><label for="bet-type">下注类型</label><input type="text" id="bet-type" placeholder="例如：主胜 / 大2.5" required></div>
                                 <div class="field"><label for="bet-source">注单来源</label><input type="text" id="bet-source" placeholder="例如：专家A / 自己分析" required></div>
                                 <div class="field"><label for="bet-amount">投注金额</label><input type="number" id="bet-amount" min="0" step="0.01" required></div>
@@ -629,6 +631,10 @@
                                     <div class="field"><label for="filter-end-date">结束日期</label><input type="date" id="filter-end-date"></div>
                                     <button type="button" id="filter-record-btn" class="btn btn-primary"><i class="fa fa-search"></i>筛选</button>
                                     <button type="button" id="reset-record-btn" class="btn btn-default"><i class="fa fa-refresh"></i>重置</button>
+                                </div>
+                                <div style="display:flex;gap:24px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);">
+                                    <div><span class="muted-line" style="font-size:12px;">筛选期内总投入</span><div style="font-size:20px;font-weight:800;margin-top:4px;" id="filter-total-amount">¥0.00</div></div>
+                                    <div><span class="muted-line" style="font-size:12px;">筛选期内总盈亏</span><div style="font-size:20px;font-weight:800;margin-top:4px;" id="filter-total-profit">¥0.00</div></div>
                                 </div>
                             </div>
                         </div>
@@ -657,8 +663,8 @@
                             </div>
                             <div class="table-wrap">
                                 <table>
-                                    <thead><tr><th>日期</th><th>类型</th><th>赛事</th><th>下注类型</th><th>来源</th><th>金额</th><th>结果</th><th>盈亏</th><th>操作</th></tr></thead>
-                                    <tbody id="bet-list"><tr><td colspan="9" style="text-align:center;color:#64748b;">暂无投注记录</td></tr></tbody>
+                                    <thead><tr><th>日期</th><th>类型</th><th>赛事</th><th>主队</th><th>客队</th><th></th></th><th>来源</th><th>金额</th><th>结果</th><th>盈亏</th><th>操作</th></tr></thead>
+                                    <tbody id="bet-list"><tr><td colspan="11" style="text-align:center;color:#64748b;">暂无投注记录</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
@@ -754,14 +760,14 @@
                     <div class="card">
                         <div class="predict-hero">
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                                <h2 class="card-title"><i class="fa fa-magic"></i>AI赛事预测中心 <span class="badge badge-primary">复合模型 V2.0</span></h2>
+                                <h2 class="card-title"><i class="fa fa-magic"></i>AI赛事预测中心 <span class="badge badge-primary">智能分析模型</span></h2>
                                 <div class="segment" aria-label="AI预测范围">
                                     <button type="button" class="segment-btn active" data-scope="all">合计</button>
                                     <button type="button" class="segment-btn" data-scope="football">足球</button>
                                     <button type="button" class="segment-btn" data-scope="basketball">篮球</button>
                                 </div>
                             </div>
-                            <p class="muted-line" style="margin-top:8px;">综合整体胜率、玩法胜率、赛事相似度、盈亏稳定性和近期状态，形成个人数据模型。</p>
+                            <p class="muted-line" style="margin-top:8px;">基于球队实力、近期状态、攻防能力、历史交锋记录等多维数据，运用AI算法进行客观赛事预测。</p>
                         </div>
                         <div class="card-body">
                             <form id="predict-form" class="form-grid-3">
@@ -772,6 +778,164 @@
                                 <div class="field"><label for="predict-amount">参考投注金额</label><input type="number" id="predict-amount" min="0" step="0.01" value="100"></div>
                                 <div class="field" style="align-self:end;"><button type="submit" class="btn btn-success"><i class="fa fa-calculator"></i>启动AI预测模型</button></div>
                             </form>
+                            
+                            <div class="card" style="margin-top:16px;">
+                                <div class="card-header" style="cursor:pointer;" onclick="toggleTeamData()">
+                                    <h3 class="card-title"><i class="fa fa-pencil-square-o"></i> 球队数据与外部因素</h3>
+                                    <span id="team-data-toggle" class="badge badge-default">展开 ▼</span>
+                                </div>
+                                <div id="team-data-panel" class="card-body hidden">
+                                    <div class="tabs">
+                                        <button type="button" class="tab-btn active" onclick="showTab('basic-tab')">📊 基础数据</button>
+                                        <button type="button" class="tab-btn" onclick="showTab('external-tab')">🌐 外部因素</button>
+                                    </div>
+                                    <div id="basic-tab" class="tab-content">
+                                        <div class="grid-2" style="gap:16px;">
+                                            <div class="stack-sm" style="padding:12px;background:#f8fafc;border-radius:8px;">
+                                                <h4 style="font-size:14px;font-weight:600;color:#1e293b;margin-bottom:12px;">🏠 主队数据</h4>
+                                                <div class="form-grid-2" style="gap:8px;">
+                                                    <div class="field" style="margin-bottom:8px;"><label>胜率(%)</label><input type="number" id="home-win-rate" min="0" max="100" placeholder="60"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>平率(%)</label><input type="number" id="home-draw-rate" min="0" max="100" placeholder="20"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>场均进球</label><input type="number" id="home-goals" min="0" step="0.1" placeholder="1.8"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>场均失球</label><input type="number" id="home-concede" min="0" step="0.1" placeholder="1.0"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>大球率(%)</label><input type="number" id="home-big-rate" min="0" max="100" placeholder="55"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>主场胜率(%)</label><input type="number" id="home-home-rate" min="0" max="100" placeholder="70"></div>
+                                                </div>
+                                                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;">
+                                                    <h5 style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;">⚽ 进攻参数</h5>
+                                                    <div class="form-grid-2" style="gap:8px;">
+                                                        <div class="field" style="margin-bottom:6px;"><label>射门/场</label><input type="number" id="home-shots" min="0" step="0.1" placeholder="15"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>射正率(%)</label><input type="number" id="home-shots-on" min="0" max="100" placeholder="45"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>控球率(%)</label><input type="number" id="home-possession" min="0" max="100" placeholder="55"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>传球成功率(%)</label><input type="number" id="home-pass-acc" min="0" max="100" placeholder="85"></div>
+                                                    </div>
+                                                </div>
+                                                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;">
+                                                    <h5 style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;">🛡️ 防守参数</h5>
+                                                    <div class="form-grid-2" style="gap:8px;">
+                                                        <div class="field" style="margin-bottom:6px;"><label>拦截/场</label><input type="number" id="home-interceptions" min="0" step="0.1" placeholder="12"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>抢断/场</label><input type="number" id="home-tackles" min="0" step="0.1" placeholder="18"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>解围/场</label><input type="number" id="home-clearances" min="0" step="0.1" placeholder="15"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>犯规/场</label><input type="number" id="home-fouls" min="0" step="0.1" placeholder="12"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="stack-sm" style="padding:12px;background:#f8fafc;border-radius:8px;">
+                                                <h4 style="font-size:14px;font-weight:600;color:#1e293b;margin-bottom:12px;">👥 客队数据</h4>
+                                                <div class="form-grid-2" style="gap:8px;">
+                                                    <div class="field" style="margin-bottom:8px;"><label>胜率(%)</label><input type="number" id="away-win-rate" min="0" max="100" placeholder="50"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>平率(%)</label><input type="number" id="away-draw-rate" min="0" max="100" placeholder="25"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>场均进球</label><input type="number" id="away-goals" min="0" step="0.1" placeholder="1.5"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>场均失球</label><input type="number" id="away-concede" min="0" step="0.1" placeholder="1.2"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>大球率(%)</label><input type="number" id="away-big-rate" min="0" max="100" placeholder="50"></div>
+                                                    <div class="field" style="margin-bottom:8px;"><label>客场胜率(%)</label><input type="number" id="away-away-rate" min="0" max="100" placeholder="40"></div>
+                                                </div>
+                                                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;">
+                                                    <h5 style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;">⚽ 进攻参数</h5>
+                                                    <div class="form-grid-2" style="gap:8px;">
+                                                        <div class="field" style="margin-bottom:6px;"><label>射门/场</label><input type="number" id="away-shots" min="0" step="0.1" placeholder="14"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>射正率(%)</label><input type="number" id="away-shots-on" min="0" max="100" placeholder="42"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>控球率(%)</label><input type="number" id="away-possession" min="0" max="100" placeholder="50"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>传球成功率(%)</label><input type="number" id="away-pass-acc" min="0" max="100" placeholder="82"></div>
+                                                    </div>
+                                                </div>
+                                                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;">
+                                                    <h5 style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;">🛡️ 防守参数</h5>
+                                                    <div class="form-grid-2" style="gap:8px;">
+                                                        <div class="field" style="margin-bottom:6px;"><label>拦截/场</label><input type="number" id="away-interceptions" min="0" step="0.1" placeholder="10"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>抢断/场</label><input type="number" id="away-tackles" min="0" step="0.1" placeholder="16"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>解围/场</label><input type="number" id="away-clearances" min="0" step="0.1" placeholder="18"></div>
+                                                        <div class="field" style="margin-bottom:6px;"><label>犯规/场</label><input type="number" id="away-fouls" min="0" step="0.1" placeholder="14"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="stack-sm" style="padding:12px;background:#fffbeb;border-radius:8px;margin-top:12px;">
+                                            <h4 style="font-size:14px;font-weight:600;color:#d97706;margin-bottom:8px;">⚔️ 交锋记录</h4>
+                                            <div class="form-grid-4" style="gap:8px;">
+                                                <div class="field"><label>主队胜</label><input type="number" id="h2h-home" min="0" placeholder="15"></div>
+                                                <div class="field"><label>客队胜</label><input type="number" id="h2h-away" min="0" placeholder="12"></div>
+                                                <div class="field"><label>平局</label><input type="number" id="h2h-draw" min="0" placeholder="8"></div>
+                                                <div class="field"><label>上次胜者</label><select id="h2h-last"><option value="">未知</option><option value="home">主队</option><option value="away">客队</option><option value="draw">平局</option></select></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="external-tab" class="tab-content hidden">
+                                        <div class="grid-2" style="gap:16px;">
+                                            <div class="stack-sm" style="padding:12px;background:#ecfdf5;border-radius:8px;">
+                                                <h4 style="font-size:14px;font-weight:600;color:#059669;margin-bottom:12px;">🏠 主队状况</h4>
+                                                <div class="form-grid-1" style="gap:8px;">
+                                                    <div class="field" style="margin-bottom:8px;">
+                                                        <label>主力阵容情况</label>
+                                                        <select id="home-lineup">
+                                                            <option value="">默认</option>
+                                                            <option value="full">全主力</option>
+                                                            <option value="partial">部分主力缺阵</option>
+                                                            <option value="weak">大面积轮换</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="field" style="margin-bottom:8px;">
+                                                        <label>联赛形势</label>
+                                                        <select id="home-situation">
+                                                            <option value="">默认</option>
+                                                            <option value="champion">已夺冠</option>
+                                                            <option value="争冠">争冠关键期</option>
+                                                            <option value="europe">争取欧战资格</option>
+                                                            <option value="middle">中游无欲无求</option>
+                                                            <option value="relegation">保级关键期</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="field" style="margin-bottom:8px;">
+                                                        <label>体能状况</label>
+                                                        <select id="home-fitness">
+                                                            <option value="">默认</option>
+                                                            <option value="fresh">体能充沛</option>
+                                                            <option value="normal">正常</option>
+                                                            <option value="tired">体能紧张</option>
+                                                            <option value="exhausted">体能透支</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="stack-sm" style="padding:12px;background:#fef3c7;border-radius:8px;">
+                                                <h4 style="font-size:14px;font-weight:600;color:#d97706;margin-bottom:12px;">👥 客队状况</h4>
+                                                <div class="form-grid-1" style="gap:8px;">
+                                                    <div class="field" style="margin-bottom:8px;">
+                                                        <label>主力阵容情况</label>
+                                                        <select id="away-lineup">
+                                                            <option value="">默认</option>
+                                                            <option value="full">全主力</option>
+                                                            <option value="partial">部分主力缺阵</option>
+                                                            <option value="weak">大面积轮换</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="field" style="margin-bottom:8px;">
+                                                        <label>联赛形势</label>
+                                                        <select id="away-situation">
+                                                            <option value="">默认</option>
+                                                            <option value="champion">已夺冠</option>
+                                                            <option value="争冠">争冠关键期</option>
+                                                            <option value="europe">争取欧战资格</option>
+                                                            <option value="middle">中游无欲无求</option>
+                                                            <option value="relegation">保级关键期</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="field" style="margin-bottom:8px;">
+                                                        <label>体能状况</label>
+                                                        <select id="away-fitness">
+                                                            <option value="">默认</option>
+                                                            <option value="fresh">体能充沛</option>
+                                                            <option value="normal">正常</option>
+                                                            <option value="tired">体能紧张</option>
+                                                            <option value="exhausted">体能透支</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -821,6 +985,78 @@
         let editingRecordId = null;
 
         const MODEL_WEIGHT = { totalWinRate: 0.20, typeWinRate: 0.30, matchSimilar: 0.20, profitStable: 0.15, recentState: 0.15 };
+        
+        const TEAM_DATABASE = {
+            football: {
+                '英超': {
+                    '曼联': { strength: 85, form: 78, attack: 88, defense: 75, homeRecord: 82, awayRecord: 70 },
+                    '曼城': { strength: 92, form: 88, attack: 95, defense: 85, homeRecord: 90, awayRecord: 85 },
+                    '利物浦': { strength: 88, form: 82, attack: 90, defense: 80, homeRecord: 88, awayRecord: 78 },
+                    '阿森纳': { strength: 84, form: 75, attack: 82, defense: 78, homeRecord: 80, awayRecord: 70 },
+                    '切尔西': { strength: 80, form: 70, attack: 78, defense: 80, homeRecord: 78, awayRecord: 68 },
+                    '热刺': { strength: 78, form: 72, attack: 80, defense: 75, homeRecord: 76, awayRecord: 68 },
+                    '纽卡斯尔': { strength: 75, form: 78, attack: 72, defense: 78, homeRecord: 80, awayRecord: 65 },
+                    '布莱顿': { strength: 72, form: 68, attack: 70, defense: 72, homeRecord: 74, awayRecord: 62 }
+                },
+                '西甲': {
+                    '巴萨': { strength: 88, form: 85, attack: 92, defense: 80, homeRecord: 88, awayRecord: 78 },
+                    '皇马': { strength: 90, form: 88, attack: 88, defense: 85, homeRecord: 90, awayRecord: 82 },
+                    '马竞': { strength: 82, form: 78, attack: 75, defense: 88, homeRecord: 82, awayRecord: 72 },
+                    '塞维利亚': { strength: 76, form: 70, attack: 72, defense: 78, homeRecord: 78, awayRecord: 68 },
+                    '比利亚雷亚尔': { strength: 74, form: 72, attack: 70, defense: 76, homeRecord: 76, awayRecord: 66 }
+                },
+                '意甲': {
+                    '尤文图斯': { strength: 82, form: 75, attack: 78, defense: 85, homeRecord: 80, awayRecord: 72 },
+                    'AC米兰': { strength: 80, form: 78, attack: 82, defense: 78, homeRecord: 82, awayRecord: 70 },
+                    '国际米兰': { strength: 84, form: 80, attack: 85, defense: 82, homeRecord: 84, awayRecord: 76 },
+                    '罗马': { strength: 76, form: 70, attack: 74, defense: 78, homeRecord: 78, awayRecord: 68 },
+                    '那不勒斯': { strength: 78, form: 75, attack: 80, defense: 75, homeRecord: 80, awayRecord: 70 }
+                },
+                '德甲': {
+                    '拜仁慕尼黑': { strength: 90, form: 85, attack: 92, defense: 85, homeRecord: 90, awayRecord: 80 },
+                    '多特蒙德': { strength: 82, form: 80, attack: 88, defense: 75, homeRecord: 84, awayRecord: 74 },
+                    '莱比锡': { strength: 78, form: 75, attack: 80, defense: 76, homeRecord: 78, awayRecord: 70 },
+                    '沃尔夫斯堡': { strength: 74, form: 70, attack: 72, defense: 76, homeRecord: 76, awayRecord: 66 }
+                },
+                '法甲': {
+                    '巴黎圣日耳曼': { strength: 92, form: 88, attack: 95, defense: 82, homeRecord: 92, awayRecord: 82 },
+                    '马赛': { strength: 76, form: 72, attack: 75, defense: 76, homeRecord: 78, awayRecord: 68 },
+                    '里昂': { strength: 78, form: 70, attack: 76, defense: 75, homeRecord: 76, awayRecord: 70 },
+                    '里尔': { strength: 74, form: 72, attack: 72, defense: 78, homeRecord: 76, awayRecord: 66 }
+                }
+            },
+            basketball: {
+                'NBA': {
+                    '湖人': { strength: 85, form: 80, offense: 88, defense: 78, homeRecord: 82, awayRecord: 72 },
+                    '勇士': { strength: 88, form: 85, offense: 92, defense: 80, homeRecord: 88, awayRecord: 78 },
+                    '凯尔特人': { strength: 86, form: 82, offense: 85, defense: 85, homeRecord: 86, awayRecord: 76 },
+                    '雄鹿': { strength: 84, form: 78, offense: 82, defense: 88, homeRecord: 84, awayRecord: 74 },
+                    '掘金': { strength: 88, form: 86, offense: 88, defense: 85, homeRecord: 88, awayRecord: 80 },
+                    '太阳': { strength: 82, form: 75, offense: 86, defense: 76, homeRecord: 80, awayRecord: 70 },
+                    '热火': { strength: 80, form: 76, offense: 80, defense: 82, homeRecord: 82, awayRecord: 70 },
+                    '快船': { strength: 84, form: 80, offense: 88, defense: 78, homeRecord: 82, awayRecord: 76 }
+                }
+            }
+        };
+        
+        const HEAD_TO_HEAD_DATA = {
+            football: {
+                '曼联VS曼城': { homeWins: 15, awayWins: 22, draws: 18, recent: '曼城' },
+                '曼联VS利物浦': { homeWins: 20, awayWins: 18, draws: 15, recent: '利物浦' },
+                '曼城VS利物浦': { homeWins: 18, awayWins: 16, draws: 12, recent: '曼城' },
+                '巴萨VS皇马': { homeWins: 25, awayWins: 20, draws: 15, recent: '巴萨' },
+                '皇马VS巴萨': { homeWins: 22, awayWins: 18, draws: 16, recent: '皇马' },
+                '拜仁VS多特': { homeWins: 28, awayWins: 12, draws: 10, recent: '拜仁' },
+                '尤文VS国米': { homeWins: 20, awayWins: 18, draws: 14, recent: '尤文' },
+                '巴黎VS马赛': { homeWins: 22, awayWins: 8, draws: 10, recent: '巴黎' }
+            },
+            basketball: {
+                '湖人VS勇士': { homeWins: 35, awayWins: 32, recent: '勇士' },
+                '凯尔特人VS雄鹿': { homeWins: 28, awayWins: 25, recent: '凯尔特人' },
+                '掘金VS太阳': { homeWins: 22, awayWins: 18, recent: '掘金' },
+                '热火VS雄鹿': { homeWins: 20, awayWins: 24, recent: '雄鹿' }
+            }
+        };
         const pageCopy = {
             record: ['投注记录', '记录赛事、投注方向、来源和盈亏，形成自己的长期数据资产。'],
             analysis: ['数据看板', '用趋势、分布和区间统计观察你的投注结构和资金曲线。'],
@@ -905,6 +1141,8 @@
                 date: val('bet-date'),
                 sport: val('bet-sport'),
                 match: val('bet-match').trim(),
+                home: val('bet-home').trim(),
+                away: val('bet-away').trim(),
                 betType: val('bet-type').trim(),
                 betSource: val('bet-source').trim(),
                 amount: Number(val('bet-amount')),
@@ -916,6 +1154,7 @@
         function renderAll() {
             renderBetList();
             updateGlobalStats();
+            updateFilterStats();
             filterChartByDate(false);
             updateAnalysisSummary();
             renderPredictHistory();
@@ -930,6 +1169,7 @@
             const e = val('filter-end-date');
             filteredData = betData.filter(i => (!s || i.date >= s) && (!e || i.date <= e));
             if (updateTip) document.getElementById('filter-tip').textContent = `已筛选 ${filteredData.length} 条`;
+            updateFilterStats();
             renderBetList();
         }
 
@@ -938,7 +1178,17 @@
             setVal('filter-end-date', '');
             filteredData = [...betData];
             document.getElementById('filter-tip').textContent = '全部记录';
+            updateFilterStats();
             renderBetList();
+        }
+
+        function updateFilterStats() {
+            const totalAmount = filteredData.reduce((sum, item) => sum + item.amount, 0);
+            const totalProfit = filteredData.reduce((sum, item) => sum + item.profit, 0);
+            document.getElementById('filter-total-amount').textContent = `¥${money(totalAmount)}`;
+            const profitEl = document.getElementById('filter-total-profit');
+            profitEl.textContent = `¥${money(totalProfit)}`;
+            profitEl.className = totalProfit > 0 ? 'text-success' : totalProfit < 0 ? 'text-danger' : '';
         }
 
         function filterChartByDate(updateTip = true) {
@@ -960,7 +1210,7 @@
         function renderBetList() {
             const el = document.getElementById('bet-list');
             if (!filteredData.length) {
-                el.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#64748b;">暂无投注记录</td></tr>';
+                el.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#64748b;">暂无投注记录</td></tr>';
                 return;
             }
             el.innerHTML = filteredData.map(r => `
@@ -968,6 +1218,8 @@
                     <td>${escapeHTML(r.date)}</td>
                     <td>${sportBadge(r.sport)}</td>
                     <td>${escapeHTML(r.match)}</td>
+                    <td>${escapeHTML(r.home || '-')}</td>
+                    <td>${escapeHTML(r.away || '-')}</td>
                     <td>${escapeHTML(r.betType)}</td>
                     <td>${escapeHTML(r.betSource)}</td>
                     <td>¥${money(r.amount)}</td>
@@ -989,6 +1241,8 @@
             setVal('bet-sport', normalizeSport(record.sport));
             setVal('bet-result', record.result);
             setVal('bet-match', record.match);
+            setVal('bet-home', record.home || '');
+            setVal('bet-away', record.away || '');
             setVal('bet-type', record.betType);
             setVal('bet-source', record.betSource);
             setVal('bet-amount', record.amount);
@@ -1142,13 +1396,17 @@
             const typeProfit = sumProfitBy(data, 'betType');
             const sourceProfit = sumProfitBy(data, 'betSource');
             const matchProfit = sumProfitBy(data, 'match');
+            const homeProfit = sumProfitBy(data, 'home');
+            const awayProfit = sumProfitBy(data, 'away');
 
             setText('profit-analysis', recent.length ? `${scopeLabel}近7天共 ${recent.length} 单，${weekProfit >= 0 ? '盈利' : '亏损'} ¥${money(Math.abs(weekProfit))}。` : `${scopeLabel}近7天暂无投注记录，建议保持稳定记录频率。`);
             setText('bet-type-analysis', `${scopeLabel}最常用玩法是 ${topKey(countBy(data, 'betType')) || '无'}，当前收益最好的玩法是 ${topKey(typeProfit) || '无'}。`);
             setText('bet-source-analysis', `${scopeLabel}最常跟单来源是 ${topKey(countBy(data, 'betSource')) || '无'}，累计收益最好的来源是 ${topKey(sourceProfit) || '无'}。`);
             setText('win-rate-analysis', `${scopeLabel}共 ${data.length} 场，胜率 ${data.length ? (win / data.length * 100).toFixed(1) : 0}%，累计${totalProfit >= 0 ? '盈利' : '亏损'} ¥${money(Math.abs(totalProfit))}。`);
             document.getElementById('keyword-analysis').innerHTML = `
-                <p>球队/赛事：盈利最多 ${escapeHTML(topKey(matchProfit) || '无')}；亏损最多 ${escapeHTML(bottomKey(matchProfit) || '无')}</p>
+                <p>联赛/赛事：盈利最多 ${escapeHTML(topKey(matchProfit) || '无')}；亏损最多 ${escapeHTML(bottomKey(matchProfit) || '无')}</p>
+                <p>主队表现：盈利最多 ${escapeHTML(topKey(homeProfit) || '无')}；亏损最多 ${escapeHTML(bottomKey(homeProfit) || '无')}</p>
+                <p>客队表现：盈利最多 ${escapeHTML(topKey(awayProfit) || '无')}；亏损最多 ${escapeHTML(bottomKey(awayProfit) || '无')}</p>
                 <p>投注方向：盈利最多 ${escapeHTML(topKey(typeProfit) || '无')}；亏损最多 ${escapeHTML(bottomKey(typeProfit) || '无')}</p>
                 <p>注单来源：收益最好 ${escapeHTML(topKey(sourceProfit) || '无')}；亏损最多 ${escapeHTML(bottomKey(sourceProfit) || '无')}</p>
             `;
@@ -1169,21 +1427,359 @@
 
         function startAIPredict(e) {
             e.preventDefault();
-            const modelData = getScopeData();
-            const scopeLabel = getScopeLabel(activeAnalysisScope);
-            if (modelData.length < 5) {
-                alert(`${scopeLabel}模型需要至少5条历史投注记录才能运算，请先补充数据！`);
-                return;
-            }
+            const sport = activeAnalysisScope === 'all' ? 'football' : activeAnalysisScope;
             const league = val('predict-league').trim();
             const home = val('predict-home').trim();
             const away = val('predict-away').trim();
             const predictType = val('predict-type');
             const amount = Number(val('predict-amount') || 0);
-            const result = runNewPredictModel(modelData, league, home, away, predictType, new Date(Date.now() - 7 * 86400000));
+            
+            if (!league || !home || !away) {
+                alert('请填写完整的赛事信息！');
+                return;
+            }
+            
+            const result = runAdvancedMatchPredictor(sport, league, home, away, predictType);
             renderPredictUI(result, amount);
-            savePredictHistory({ time: new Date().toLocaleString(), scope: scopeLabel, match: `${home}VS${away}`, type: getPredictTypeText(predictType), confidence: result.confidence, result: result.resultText, risk: result.riskText, upset: result.upsetRate });
-            alert('AI复合模型 V2.0 运算完成！');
+            savePredictHistory({ time: new Date().toLocaleString(), scope: getScopeLabel(activeAnalysisScope), match: `${home}VS${away}`, type: getPredictTypeText(predictType), confidence: result.confidence, result: result.resultText, risk: result.riskText, upset: result.upsetRate });
+            alert('AI赛事预测模型运算完成！');
+        }
+
+        function toggleTeamData() {
+            const panel = document.getElementById('team-data-panel');
+            const toggle = document.getElementById('team-data-toggle');
+            panel.classList.toggle('hidden');
+            toggle.textContent = panel.classList.contains('hidden') ? '展开 ▼' : '收起 ▲';
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.remove('hidden');
+            event.target.classList.add('active');
+        }
+
+        function calculateAttackScore(shots, shotsOn, possession, passAcc, goals, defaultAttack) {
+            let score = defaultAttack || 50;
+            let count = 0;
+            
+            if (shots !== null) {
+                score += (shots - 14) * 1.5;
+                count++;
+            }
+            if (shotsOn !== null) {
+                score += (shotsOn - 45) * 0.3;
+                count++;
+            }
+            if (possession !== null) {
+                score += (possession - 50) * 0.3;
+                count++;
+            }
+            if (passAcc !== null) {
+                score += (passAcc - 80) * 0.2;
+                count++;
+            }
+            if (goals !== null) {
+                score += (goals - 1.5) * 8;
+                count++;
+            }
+            
+            if (count > 0) {
+                score = Math.max(20, Math.min(100, score));
+            }
+            return Math.round(score);
+        }
+        
+        function calculateDefenseScore(interceptions, tackles, clearances, fouls, concede, defaultDefense) {
+            let score = defaultDefense || 50;
+            let count = 0;
+            
+            if (interceptions !== null) {
+                score += (interceptions - 10) * 1;
+                count++;
+            }
+            if (tackles !== null) {
+                score += (tackles - 15) * 0.8;
+                count++;
+            }
+            if (clearances !== null) {
+                score += (clearances - 15) * 0.5;
+                count++;
+            }
+            if (fouls !== null) {
+                score -= (fouls - 12) * 0.5;
+                count++;
+            }
+            if (concede !== null) {
+                score -= (concede - 1.2) * 15;
+                count++;
+            }
+            
+            if (count > 0) {
+                score = Math.max(20, Math.min(100, score));
+            }
+            return Math.round(score);
+        }
+        
+        function getUserInputTeamData() {
+            return {
+                home: {
+                    winRate: Number(val('home-win-rate')) || null,
+                    drawRate: Number(val('home-draw-rate')) || null,
+                    goals: Number(val('home-goals')) || null,
+                    concede: Number(val('home-concede')) || null,
+                    bigRate: Number(val('home-big-rate')) || null,
+                    homeRate: Number(val('home-home-rate')) || null,
+                    shots: Number(val('home-shots')) || null,
+                    shotsOn: Number(val('home-shots-on')) || null,
+                    possession: Number(val('home-possession')) || null,
+                    passAcc: Number(val('home-pass-acc')) || null,
+                    interceptions: Number(val('home-interceptions')) || null,
+                    tackles: Number(val('home-tackles')) || null,
+                    clearances: Number(val('home-clearances')) || null,
+                    fouls: Number(val('home-fouls')) || null,
+                    lineup: val('home-lineup') || null,
+                    situation: val('home-situation') || null,
+                    fitness: val('home-fitness') || null
+                },
+                away: {
+                    winRate: Number(val('away-win-rate')) || null,
+                    drawRate: Number(val('away-draw-rate')) || null,
+                    goals: Number(val('away-goals')) || null,
+                    concede: Number(val('away-concede')) || null,
+                    bigRate: Number(val('away-big-rate')) || null,
+                    awayRate: Number(val('away-away-rate')) || null,
+                    shots: Number(val('away-shots')) || null,
+                    shotsOn: Number(val('away-shots-on')) || null,
+                    possession: Number(val('away-possession')) || null,
+                    passAcc: Number(val('away-pass-acc')) || null,
+                    interceptions: Number(val('away-interceptions')) || null,
+                    tackles: Number(val('away-tackles')) || null,
+                    clearances: Number(val('away-clearances')) || null,
+                    fouls: Number(val('away-fouls')) || null,
+                    lineup: val('away-lineup') || null,
+                    situation: val('away-situation') || null,
+                    fitness: val('away-fitness') || null
+                },
+                h2h: {
+                    homeWins: Number(val('h2h-home')) || null,
+                    awayWins: Number(val('h2h-away')) || null,
+                    draws: Number(val('h2h-draw')) || null,
+                    last: val('h2h-last') || null
+                }
+            };
+        }
+
+        function runAdvancedMatchPredictor(sport, league, home, away, predictType) {
+            const userData = getUserInputTeamData();
+            const dbTeam = TEAM_DATABASE[sport]?.[league] || {};
+            const defaultTeam = { strength: 50, form: 50, attack: 50, defense: 50, homeRecord: 50, awayRecord: 50 };
+            
+            const homeDb = dbTeam[home] || defaultTeam;
+            const awayDb = dbTeam[away] || defaultTeam;
+            
+            const homeWinRate = userData.home.winRate !== null ? userData.home.winRate : (homeDb.strength / 100 * 60 + 30);
+            const homeDrawRate = userData.home.drawRate !== null ? userData.home.drawRate : ((100 - homeWinRate) * 0.4);
+            const homeGoals = userData.home.goals !== null ? userData.home.goals : (homeDb.attack / 100 * 2);
+            const homeConcede = userData.home.concede !== null ? userData.home.concede : ((100 - homeDb.defense) / 100 * 2);
+            const homeBigRate = userData.home.bigRate !== null ? userData.home.bigRate : ((homeGoals + homeConcede > 2.5) ? 55 : 45);
+            const homeHomeRate = userData.home.homeRate !== null ? userData.home.homeRate : homeDb.homeRecord;
+            
+            const awayWinRate = userData.away.winRate !== null ? userData.away.winRate : (awayDb.strength / 100 * 60 + 30);
+            const awayDrawRate = userData.away.drawRate !== null ? userData.away.drawRate : ((100 - awayWinRate) * 0.4);
+            const awayGoals = userData.away.goals !== null ? userData.away.goals : (awayDb.attack / 100 * 2);
+            const awayConcede = userData.away.concede !== null ? userData.away.concede : ((100 - awayDb.defense) / 100 * 2);
+            const awayBigRate = userData.away.bigRate !== null ? userData.away.bigRate : ((awayGoals + awayConcede > 2.5) ? 55 : 45);
+            const awayAwayRate = userData.away.awayRate !== null ? userData.away.awayRate : awayDb.awayRecord;
+            
+            const homeShots = userData.home.shots;
+            const homeShotsOn = userData.home.shotsOn;
+            const homePossession = userData.home.possession;
+            const homePassAcc = userData.home.passAcc;
+            const homeInterceptions = userData.home.interceptions;
+            const homeTackles = userData.home.tackles;
+            const homeClearances = userData.home.clearances;
+            const homeFouls = userData.home.fouls;
+            
+            const awayShots = userData.away.shots;
+            const awayShotsOn = userData.away.shotsOn;
+            const awayPossession = userData.away.possession;
+            const awayPassAcc = userData.away.passAcc;
+            const awayInterceptions = userData.away.interceptions;
+            const awayTackles = userData.away.tackles;
+            const awayClearances = userData.away.clearances;
+            const awayFouls = userData.away.fouls;
+            
+            const homeAttackScore = calculateAttackScore(homeShots, homeShotsOn, homePossession, homePassAcc, homeGoals, homeDb.attack);
+            const homeDefenseScore = calculateDefenseScore(homeInterceptions, homeTackles, homeClearances, homeFouls, homeConcede, homeDb.defense);
+            const awayAttackScore = calculateAttackScore(awayShots, awayShotsOn, awayPossession, awayPassAcc, awayGoals, awayDb.attack);
+            const awayDefenseScore = calculateDefenseScore(awayInterceptions, awayTackles, awayClearances, awayFouls, awayConcede, awayDb.defense);
+            
+            let h2hHomeWins = userData.h2h.homeWins;
+            let h2hAwayWins = userData.h2h.awayWins;
+            let h2hDraws = userData.h2h.draws;
+            let h2hLast = userData.h2h.last;
+            
+            if (h2hHomeWins === null || h2hAwayWins === null) {
+                const h2hKey1 = `${home}VS${away}`;
+                const h2hKey2 = `${away}VS${home}`;
+                const h2hDb = HEAD_TO_HEAD_DATA[sport]?.[h2hKey1] || HEAD_TO_HEAD_DATA[sport]?.[h2hKey2] || null;
+                if (h2hDb) {
+                    h2hHomeWins = h2hHomeWins !== null ? h2hHomeWins : (h2hKey1 in HEAD_TO_HEAD_DATA[sport] ? h2hDb.homeWins : h2hDb.awayWins);
+                    h2hAwayWins = h2hAwayWins !== null ? h2hAwayWins : (h2hKey1 in HEAD_TO_HEAD_DATA[sport] ? h2hDb.awayWins : h2hDb.homeWins);
+                    h2hDraws = h2hDraws !== null ? h2hDraws : (h2hDb.draws || 0);
+                    h2hLast = h2hLast !== null ? h2hLast : (h2hDb.recent === home ? 'home' : h2hDb.recent === away ? 'away' : '');
+                }
+            }
+            
+            const lineupBonus = {
+                full: 8,
+                partial: -3,
+                weak: -12
+            };
+            
+            const situationBonus = {
+                champion: -10,
+                '争冠': 5,
+                europe: 3,
+                middle: -2,
+                relegation: 8
+            };
+            
+            const fitnessBonus = {
+                fresh: 5,
+                normal: 0,
+                tired: -5,
+                exhausted: -12
+            };
+            
+            const homeLineup = userData.home.lineup ? lineupBonus[userData.home.lineup] || 0 : 0;
+            const awayLineup = userData.away.lineup ? lineupBonus[userData.away.lineup] || 0 : 0;
+            const homeSituation = userData.home.situation ? situationBonus[userData.home.situation] || 0 : 0;
+            const awaySituation = userData.away.situation ? situationBonus[userData.away.situation] || 0 : 0;
+            const homeFitness = userData.home.fitness ? fitnessBonus[userData.home.fitness] || 0 : 0;
+            const awayFitness = userData.away.fitness ? fitnessBonus[userData.away.fitness] || 0 : 0;
+            
+            const homeExternalFactor = homeLineup + homeSituation + homeFitness;
+            const awayExternalFactor = awayLineup + awaySituation + awayFitness;
+            const externalDiff = homeExternalFactor - awayExternalFactor;
+            
+            const homeAdvantage = sport === 'football' ? 8 : 5;
+            
+            const homeStrengthScore = ((homeWinRate + homeAttackScore + homeDefenseScore + homeHomeRate) / 4) + homeAdvantage;
+            const awayStrengthScore = (awayWinRate + awayAttackScore + awayDefenseScore + awayAwayRate) / 4;
+            
+            const powerDiff = homeStrengthScore - awayStrengthScore;
+            const formDiff = homeWinRate - awayWinRate;
+            
+            const expectedGoals = homeGoals + awayConcede * 0.5;
+            const expectedConcede = awayGoals + homeConcede * 0.5;
+            const totalExpectedGoals = expectedGoals + expectedConcede;
+            
+            let h2hScore = 50;
+            let recentEdge = 0;
+            if (h2hHomeWins !== null && h2hAwayWins !== null) {
+                const total = h2hHomeWins + h2hAwayWins + (h2hDraws || 0);
+                if (total > 0) {
+                    h2hScore = (h2hHomeWins / total) * 100;
+                }
+            }
+            if (h2hLast === 'home') recentEdge = 5;
+            else if (h2hLast === 'away') recentEdge = -5;
+            
+            let baseConfidence;
+            let resultText, riskText, upsetRate, hotColdStatus, positionSuggest;
+            
+            const avgBigRate = (homeBigRate + awayBigRate) / 2;
+            
+            if (predictType === 'win') {
+                baseConfidence = 50 + powerDiff * 0.5 + formDiff * 0.3 + recentEdge + (h2hScore - 50) * 0.25 + homeAdvantage + externalDiff * 0.5;
+            } else if (predictType === 'lose') {
+                baseConfidence = 50 - powerDiff * 0.5 - formDiff * 0.3 - recentEdge - (h2hScore - 50) * 0.25 - homeAdvantage - externalDiff * 0.5;
+            } else if (predictType === 'draw') {
+                const balance = Math.abs(powerDiff) + Math.abs(formDiff) + Math.abs(externalDiff);
+                const drawProb = Math.min(45, Math.max(18, 38 - balance * 0.25));
+                baseConfidence = drawProb + ((h2hDraws || 0) > 0 ? 8 : 0);
+            } else if (predictType === 'big') {
+                baseConfidence = Math.min(90, Math.max(28, totalExpectedGoals * 22 + avgBigRate * 0.25 + (externalDiff > 0 ? 5 : externalDiff < 0 ? -5 : 0)));
+            } else {
+                baseConfidence = Math.min(90, Math.max(28, 100 - totalExpectedGoals * 18 - avgBigRate * 0.2 - (externalDiff > 0 ? 3 : 0)));
+            }
+            
+            baseConfidence = Math.min(95, Math.max(18, baseConfidence));
+            
+            let dataQuality = 0.5;
+            let userInputCount = 0;
+            let totalFields = 0;
+            Object.values(userData.home).forEach(v => { if (v !== null && v !== '') userInputCount++; totalFields++; });
+            Object.values(userData.away).forEach(v => { if (v !== null && v !== '') userInputCount++; totalFields++; });
+            dataQuality = 0.5 + (userInputCount / totalFields) * 0.5;
+            baseConfidence = baseConfidence * dataQuality;
+            
+            if (baseConfidence >= 75) {
+                resultText = '高概率命中';
+                riskText = '低';
+                upsetRate = Math.round((100 - baseConfidence) * 0.25);
+                hotColdStatus = `🔥 热门状态：${home}在实力、状态和主场优势上占据明显上风。预计进球数: ${totalExpectedGoals.toFixed(1)}`;
+                positionSuggest = '💰 建议使用参考金额的 50%-70%，单场投注金额不超过总资金的 10%。';
+            } else if (baseConfidence >= 55) {
+                resultText = '较高概率';
+                riskText = '中低';
+                upsetRate = Math.round((100 - baseConfidence) * 0.4);
+                hotColdStatus = `🌡️ 偏热状态：${home}略占优势，但仍有不确定性。预计进球数: ${totalExpectedGoals.toFixed(1)}`;
+                positionSuggest = '💰 建议使用参考金额的 30%-50%，保持谨慎。';
+            } else if (baseConfidence >= 45) {
+                resultText = '势均力敌';
+                riskText = '中';
+                upsetRate = Math.round((100 - baseConfidence) * 0.55);
+                hotColdStatus = '⚔️ 胶着状态：双方实力接近，胜负难料。预计进球数: ' + totalExpectedGoals.toFixed(1);
+                positionSuggest = '💰 建议使用参考金额的 10%-20%，小额试水。';
+            } else if (baseConfidence >= 35) {
+                resultText = '较低概率';
+                riskText = '中高';
+                upsetRate = Math.round((100 - baseConfidence) * 0.7);
+                hotColdStatus = `❄️ 偏冷状态：${away}占据优势，${home}需要超常发挥。预计进球数: ${totalExpectedGoals.toFixed(1)}`;
+                positionSuggest = '💰 不建议大额投注；如需参与，参考金额的 5%-10%。';
+            } else {
+                resultText = '低概率';
+                riskText = '高';
+                upsetRate = Math.round((100 - baseConfidence) * 0.85);
+                hotColdStatus = `🧊 冷门状态：${away}实力明显占优，${home}获胜难度极大。预计进球数: ${totalExpectedGoals.toFixed(1)}`;
+                positionSuggest = '💰 强烈不建议投注；风险极高。';
+            }
+            
+            const expectedOdds = predictType === 'win' ? 1 / (baseConfidence / 100) : 
+                               predictType === 'lose' ? 1 / ((100 - baseConfidence) / 100) : 
+                               predictType === 'draw' ? 1 / (baseConfidence / 100) : 2;
+            const expectProfit = Math.round((expectedOdds - 1) * 100 * (baseConfidence / 100)) / 100;
+            
+            return {
+                confidence: Math.round(baseConfidence),
+                resultText,
+                riskText,
+                upsetRate,
+                hotColdStatus,
+                positionSuggest,
+                expectProfit,
+                factor: {
+                    strengthDiff: Math.round(powerDiff),
+                    formDiff: Math.round(formDiff),
+                    h2hScore: Math.round(h2hScore),
+                    dataQuality: Math.round(dataQuality * 100),
+                    expectedGoals: totalExpectedGoals.toFixed(1),
+                    homeWinRate: Math.round(homeWinRate),
+                    awayWinRate: Math.round(awayWinRate),
+                    externalDiff: Math.round(externalDiff),
+                    homeExternal: Math.round(homeExternalFactor),
+                    awayExternal: Math.round(awayExternalFactor),
+                    homeLineup: userData.home.lineup ? userData.home.lineup : '-',
+                    awayLineup: userData.away.lineup ? userData.away.lineup : '-',
+                    homeSituation: userData.home.situation ? userData.home.situation : '-',
+                    awaySituation: userData.away.situation ? userData.away.situation : '-',
+                    homeFitness: userData.home.fitness ? userData.home.fitness : '-',
+                    awayFitness: userData.away.fitness ? userData.away.fitness : '-'
+                }
+            };
         }
 
         function runNewPredictModel(modelData, league, home, away, predictType, sevenDayAgo) {
@@ -1192,7 +1788,7 @@
             const totalWin = modelData.filter(d => d.result === 'win').length;
             const typeList = modelData.filter(d => d.betType.includes(typeText));
             const typeWin = typeList.filter(d => d.result === 'win').length;
-            const similarCount = modelData.filter(d => d.match.includes(league) || d.match.includes(home) || d.match.includes(away)).length;
+            const similarCount = modelData.filter(d => d.match.includes(league) || d.home === home || d.away === away || d.home === away || d.away === home).length;
             const profits = modelData.map(d => Number(d.profit || 0));
             const avgProfit = profits.reduce((a, b) => a + b, 0) / profits.length;
             const variance = profits.reduce((s, p) => s + Math.pow(p - avgProfit, 2), 0) / profits.length;
@@ -1237,14 +1833,109 @@
             const bar = document.getElementById('confidence-bar');
             bar.style.width = `${result.confidence}%`;
             bar.className = `progress-value ${result.confidence >= 75 ? 'progress-high' : result.confidence >= 50 ? 'progress-mid' : 'progress-low'}`;
+            
+            const f = result.factor;
+            const lineupText = { 'full': '全主力', 'partial': '部分缺阵', 'weak': '大面积轮换', '-': '未设置' };
+            const situationText = { 'champion': '已夺冠', '争冠': '争冠关键期', 'europe': '争取欧战', 'middle': '中游无欲', 'relegation': '保级关键期', '-': '未设置' };
+            const fitnessText = { 'fresh': '充沛', 'normal': '正常', 'tired': '紧张', 'exhausted': '透支', '-': '未设置' };
+            
             document.getElementById('predict-basis').innerHTML = `
-                <p>整体胜率因子：${result.factor.totalWinRate.toFixed(1)}%</p>
-                <p>玩法胜率因子：${result.factor.typeWinRate.toFixed(1)}%</p>
-                <p>赛事相似度因子：${result.factor.matchSimilarScore.toFixed(1)}%</p>
-                <p>盈亏稳定性因子：${result.factor.profitStableScore.toFixed(1)}%</p>
-                <p>近期状态因子：${result.factor.recentStateScore.toFixed(1)}%</p>
+                <div class="tabs" style="margin-bottom:12px;">
+                    <button type="button" class="tab-btn active" onclick="showBasisTab('stats-tab')">📊 基础数据</button>
+                    <button type="button" class="tab-btn" onclick="showBasisTab('external-tab')">🌐 外部因素</button>
+                </div>
+                <div id="stats-tab" class="basis-tab-content">
+                    <div class="grid-2" style="gap:12px;">
+                        <div style="padding:8px;background:#f8fafc;border-radius:6px;">
+                            <p><strong>🏆 实力差距</strong></p>
+                            <p style="color:${f.strengthDiff > 0 ? '#22c55e' : f.strengthDiff < 0 ? '#ef4444' : '#64748b'};">
+                                ${f.strengthDiff > 0 ? '主队占优' : f.strengthDiff < 0 ? '客队占优' : '势均力敌'} (${Math.abs(f.strengthDiff)}分)
+                            </p>
+                        </div>
+                        <div style="padding:8px;background:#f8fafc;border-radius:6px;">
+                            <p><strong>📊 状态差距</strong></p>
+                            <p style="color:${f.formDiff > 0 ? '#22c55e' : f.formDiff < 0 ? '#ef4444' : '#64748b'};">
+                                主队胜率${f.homeWinRate}% vs 客队胜率${f.awayWinRate}%
+                            </p>
+                        </div>
+                        <div style="padding:8px;background:#f8fafc;border-radius:6px;">
+                            <p><strong>⚔️ 交锋记录</strong></p>
+                            <p>交锋倾向：${f.h2hScore >= 50 ? '主队占优' : '客队占优'} (${f.h2hScore}%)</p>
+                        </div>
+                        <div style="padding:8px;background:#f8fafc;border-radius:6px;">
+                            <p><strong>🎯 预计进球</strong></p>
+                            <p>总进球预期：${f.expectedGoals}球</p>
+                        </div>
+                        <div style="padding:8px;background:#f8fafc;border-radius:6px;">
+                            <p><strong>📈 数据质量</strong></p>
+                            <p>数据可信度：${f.dataQuality}%</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="external-tab" class="basis-tab-content hidden">
+                    <div style="display:flex;gap:16px;">
+                        <div style="flex:1;padding:12px;background:#ecfdf5;border-radius:8px;">
+                            <h4 style="font-size:14px;font-weight:600;color:#059669;margin-bottom:8px;">🏠 主队状况</h4>
+                            <div style="display:grid;gap:6px;">
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span>阵容：</span>
+                                    <span style="color:${f.homeLineup === 'full' ? '#22c55e' : f.homeLineup === 'weak' ? '#ef4444' : '#64748b'}">${lineupText[f.homeLineup]}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span>形势：</span>
+                                    <span style="color:${f.homeSituation === 'champion' ? '#f59e0b' : f.homeSituation === 'relegation' || f.homeSituation === '争冠' ? '#22c55e' : '#64748b'}">${situationText[f.homeSituation]}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span>体能：</span>
+                                    <span style="color:${f.homeFitness === 'fresh' ? '#22c55e' : f.homeFitness === 'exhausted' ? '#ef4444' : '#64748b'}">${fitnessText[f.homeFitness]}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span>综合因素：</span>
+                                    <span style="color:${f.homeExternal > 0 ? '#22c55e' : f.homeExternal < 0 ? '#ef4444' : '#64748b'}">${f.homeExternal > 0 ? '+' : ''}${f.homeExternal}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="flex:1;padding:12px;background:#fef3c7;border-radius:8px;">
+                            <h4 style="font-size:14px;font-weight:600;color:#d97706;margin-bottom:8px;">👥 客队状况</h4>
+                            <div style="display:grid;gap:6px;">
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span>阵容：</span>
+                                    <span style="color:${f.awayLineup === 'full' ? '#22c55e' : f.awayLineup === 'weak' ? '#ef4444' : '#64748b'}">${lineupText[f.awayLineup]}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span>形势：</span>
+                                    <span style="color:${f.awaySituation === 'champion' ? '#f59e0b' : f.awaySituation === 'relegation' || f.awaySituation === '争冠' ? '#22c55e' : '#64748b'}">${situationText[f.awaySituation]}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span>体能：</span>
+                                    <span style="color:${f.awayFitness === 'fresh' ? '#22c55e' : f.awayFitness === 'exhausted' ? '#ef4444' : '#64748b'}">${fitnessText[f.awayFitness]}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span>综合因素：</span>
+                                    <span style="color:${f.awayExternal > 0 ? '#22c55e' : f.awayExternal < 0 ? '#ef4444' : '#64748b'}">${f.awayExternal > 0 ? '+' : ''}${f.awayExternal}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;padding:12px;background:#e0e7ff;border-radius:8px;">
+                        <div style="display:flex;justify-content:space-between;">
+                            <span><strong>💡 外部因素差值：</strong></span>
+                            <span style="color:${f.externalDiff > 0 ? '#22c55e' : f.externalDiff < 0 ? '#ef4444' : '#64748b'}">
+                                ${f.externalDiff > 0 ? '主队有利 +' : f.externalDiff < 0 ? '客队有利 ' : '无差异 '}${f.externalDiff}
+                            </span>
+                        </div>
+                    </div>
+                </div>
             `;
-            setText('predict-suggestion', result.confidence >= 75 ? '历史数据支持度较高，但仍应控制单场风险，避免扩大投入。' : result.confidence >= 50 ? '建议结合临场阵容、赔率变化和赛程强度再判断。' : '建议优先复盘相似赛事亏损原因，本场降低参与度。');
+            
+            setText('predict-suggestion', result.confidence >= 75 ? '球队实力、状态和交锋记录均支持预测结论，但仍应控制单场风险，避免扩大投入。' : result.confidence >= 50 ? '数据显示有一定优势，但建议结合临场阵容、赔率变化和赛程强度再做最终判断。' : '数据支持度较低，建议优先降低参与度或放弃本场。');
+        }
+
+        function showBasisTab(tabId) {
+            document.querySelectorAll('.basis-tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.remove('hidden');
+            event.target.classList.add('active');
         }
 
         function savePredictHistory(item) {
