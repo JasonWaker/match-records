@@ -1526,11 +1526,49 @@
                 });
                 return;
             }
-            const common = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { boxWidth: 12, usePointStyle: true } } } };
-            profitChart = new Chart(document.getElementById('profit-chart'), { type: 'line', data: { labels: [], datasets: [{ label: '累计盈亏', data: [], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.12)', fill: true, tension: .35, pointRadius: 3 }] }, options: common });
-            resultChart = new Chart(document.getElementById('result-chart'), { type: 'doughnut', data: { labels: ['赢', '输', '走水'], datasets: [{ data: [0, 0, 0], backgroundColor: ['#16a34a', '#dc2626', '#d97706'], borderWidth: 0 }] }, options: common });
-            sourceChart = new Chart(document.getElementById('source-chart'), { type: 'doughnut', data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] }, options: common });
-            monthlyChart = new Chart(document.getElementById('monthly-chart'), { type: 'bar', data: { labels: [], datasets: [{ label: '月度盈亏', data: [], backgroundColor: '#2563eb', borderRadius: 8 }] }, options: common });
+            const pieOptions = { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { 
+                    legend: { 
+                        labels: { 
+                            boxWidth: 12, 
+                            usePointStyle: true,
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                return data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return {
+                                        text: `${label} (${percentage}%)`,
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        strokeStyle: data.datasets[0].backgroundColor[i],
+                                        lineWidth: 0,
+                                        hidden: false,
+                                        index: i
+                                    };
+                                });
+                            }
+                        } 
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${context.label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                } 
+            };
+            const lineBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { boxWidth: 12, usePointStyle: true } } } };
+            profitChart = new Chart(document.getElementById('profit-chart'), { type: 'line', data: { labels: [], datasets: [{ label: '累计盈亏', data: [], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.12)', fill: true, tension: .35, pointRadius: 3 }] }, options: lineBarOptions });
+            resultChart = new Chart(document.getElementById('result-chart'), { type: 'doughnut', data: { labels: ['赢', '输', '走水'], datasets: [{ data: [0, 0, 0], backgroundColor: ['#16a34a', '#dc2626', '#d97706'], borderWidth: 0 }] }, options: pieOptions });
+            sourceChart = new Chart(document.getElementById('source-chart'), { type: 'doughnut', data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] }, options: pieOptions });
+            monthlyChart = new Chart(document.getElementById('monthly-chart'), { type: 'bar', data: { labels: [], datasets: [{ label: '月度盈亏', data: [], backgroundColor: '#2563eb', borderRadius: 8 }] }, options: lineBarOptions });
         }
 
         function updateCharts() {
