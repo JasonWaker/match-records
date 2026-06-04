@@ -695,8 +695,13 @@
                             </div>
                             <div class="card-body">
                                 <div class="filter-row">
-                                    <div class="field"><label>开始日期</label><input type="date" id="filter-start-date"></div>
-                                    <div class="field"><label>结束日期</label><input type="date" id="filter-end-date"></div>
+                                    <div class="field"><label for="filter-start-date">开始日期</label><input type="date" id="filter-start-date"></div>
+                                    <div class="field"><label for="filter-end-date">结束日期</label><input type="date" id="filter-end-date"></div>
+                                    <div class="field"><label for="filter-source">跟单人员</label>
+                                        <select id="filter-source" style="padding:8px 12px;border:1px solid var(--line);border-radius:6px;font-size:14px;">
+                                            <option value="">全部人员</option>
+                                        </select>
+                                    </div>
                                     <button type="button" id="filter-record-btn" class="btn btn-primary"><i class="fa fa-search"></i>筛选</button>
                                     <button type="button" id="reset-record-btn" class="btn btn-default"><i class="fa fa-refresh"></i>重置</button>
                                 </div>
@@ -1179,6 +1184,7 @@
             loadPredictHistory();
             filteredData = [...betData];
             chartFilteredData = [...betData];
+            updateSourceOptions();
 
             document.getElementById('bet-date').valueAsDate = new Date();
             document.getElementById('bet-form').addEventListener('submit', saveBetRecord);
@@ -1244,6 +1250,7 @@
             saveData();
             resetBetForm();
             initChartDefaultDate();
+            updateSourceOptions();
             refreshRecordFilter(false);
             renderAll();
             alert(wasEditing ? '更新成功！' : '保存成功！');
@@ -1280,7 +1287,12 @@
         function refreshRecordFilter(updateTip) {
             const s = val('filter-start-date');
             const e = val('filter-end-date');
-            filteredData = betData.filter(i => (!s || i.date >= s) && (!e || i.date <= e));
+            const source = val('filter-source');
+            filteredData = betData.filter(i => 
+                (!s || i.date >= s) && 
+                (!e || i.date <= e) &&
+                (!source || i.betSource === source)
+            );
             if (updateTip) document.getElementById('filter-tip').textContent = `已筛选 ${filteredData.length} 条`;
             updateFilterStats();
             renderBetList();
@@ -1289,10 +1301,23 @@
         function resetFilter() {
             setVal('filter-start-date', '');
             setVal('filter-end-date', '');
+            setVal('filter-source', '');
             filteredData = [...betData];
             document.getElementById('filter-tip').textContent = '全部记录';
             updateFilterStats();
             renderBetList();
+        }
+
+        function updateSourceOptions() {
+            const sources = [...new Set(betData.map(item => item.betSource).filter(Boolean))];
+            const select = document.getElementById('filter-source');
+            select.innerHTML = '<option value="">全部人员</option>';
+            sources.sort().forEach(source => {
+                const option = document.createElement('option');
+                option.value = source;
+                option.textContent = source;
+                select.appendChild(option);
+            });
         }
 
         function updateFilterStats() {
