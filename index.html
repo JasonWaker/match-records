@@ -2475,7 +2475,34 @@
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('ocr-upload').addEventListener('change', handleOCRUpload);
             document.getElementById('ocr-demo-btn').addEventListener('click', runOCRDemo);
+            
+            document.getElementById('ocr-section').addEventListener('paste', handlePaste);
+            document.addEventListener('paste', function(e) {
+                if (e.target.closest('#ocr-section')) {
+                    handlePaste(e);
+                }
+            });
         });
+
+        function handlePaste(e) {
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            
+            const imageItem = Array.from(items).find(item => item.type.startsWith('image/'));
+            if (!imageItem) return;
+            
+            e.preventDefault();
+            
+            const file = imageItem.getAsFile();
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('ocr-image-preview').src = event.target.result;
+                document.getElementById('ocr-preview').classList.remove('hidden');
+                
+                performOCR(event.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
 
         function handleOCRUpload(e) {
             const file = e.target.files[0];
@@ -2753,6 +2780,7 @@
                     <div style="text-align:center;">
                         <i class="fa fa-camera" style="font-size:48px;color:#3b82f6;margin-bottom:12px;"></i>
                         <p style="color:#64748b;font-size:14px;margin-bottom:12px;">上传投注结算截图，自动识别并填充数据</p>
+                        <p style="color:#94a3b8;font-size:12px;margin-bottom:12px;"><i class="fa fa-clipboard"></i> 支持粘贴图片（Ctrl+V）</p>
                         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
                             <label for="ocr-upload" class="btn btn-primary" style="cursor:pointer;"><i class="fa fa-upload"></i> 选择图片</label>
                             <input type="file" id="ocr-upload" accept="image/*" class="hidden">
