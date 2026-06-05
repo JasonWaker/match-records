@@ -2583,6 +2583,7 @@
             setVal('bet-away', data.away || '');
             setVal('bet-type', data.betType || '');
             setVal('bet-amount', data.amount || '');
+            setVal('bet-return', data.returnAmount || '');
             setVal('bet-profit', profit);
             setVal('bet-result', result);
             setVal('bet-source', 'OCR识别');
@@ -2623,19 +2624,31 @@
             });
         });
 
+        function calculateProfit() {
+            const amount = parseFloat(document.getElementById('bet-amount').value) || 0;
+            const returnAmount = parseFloat(document.getElementById('bet-return').value) || 0;
+            const profit = (returnAmount - amount).toFixed(2);
+            document.getElementById('bet-profit').value = profit;
+        }
+
         function openBetModal() {
             document.getElementById('bet-modal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
             document.getElementById('bet-date').value = new Date().toISOString().split('T')[0];
+            
+            document.getElementById('bet-amount').addEventListener('input', calculateProfit);
+            document.getElementById('bet-return').addEventListener('input', calculateProfit);
         }
 
         function closeBetModal() {
             document.getElementById('bet-modal').classList.add('hidden');
             document.body.style.overflow = '';
             document.getElementById('bet-form').reset();
-            document.getElementById('bet-amount').value = '30';
             document.getElementById('ocr-preview').classList.add('hidden');
             document.getElementById('ocr-result').classList.add('hidden');
+            
+            document.getElementById('bet-amount').removeEventListener('input', calculateProfit);
+            document.getElementById('bet-return').removeEventListener('input', calculateProfit);
         }
 
         const danmakuMessages = [
@@ -2808,7 +2821,8 @@
                     <div class="field"><label for="bet-away">客队</label><input type="text" id="bet-away" placeholder="例如：曼城" required></div>
                     <div class="field"><label for="bet-type">下注类型</label><input type="text" id="bet-type" placeholder="例如：主胜 / 大2.5" required></div>
                     <div class="field"><label for="bet-source">注单来源</label><input type="text" id="bet-source" placeholder="例如：专家A / 自己分析" required></div>
-                    <div class="field"><label for="bet-amount">投注金额</label><input type="number" id="bet-amount" min="0" step="0.01" required value="30"></div>
+                    <div class="field"><label for="bet-amount">投注金额</label><input type="number" id="bet-amount" min="0" step="0.01" required></div>
+                    <div class="field"><label for="bet-return">返还金额</label><input type="number" id="bet-return" min="0" step="0.01" placeholder="返还额 = 投注额 + 盈亏"></div>
                     <div class="field"><label for="bet-profit">盈亏金额</label><input type="number" id="bet-profit" step="0.01" required></div>
                     <div class="field full actions">
                         <button type="button" id="cancel-edit-btn" class="btn btn-default hidden"><i class="fa fa-times"></i>取消编辑</button>
