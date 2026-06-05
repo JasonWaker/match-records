@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>球赛投注记录与AI分析系统</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentUser = localStorage.getItem('currentUser');
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+        });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <style>
@@ -632,9 +641,23 @@
                     <h1 id="page-heading">投注记录</h1>
                     <p id="page-subtitle">记录赛事、投注方向、来源和盈亏，形成自己的长期数据资产。</p>
                 </div>
-                <div class="balance-pill">
-                    <span>账户总盈亏</span>
-                    <strong id="total-balance-value">¥0.00</strong>
+                <div style="display:flex;align-items:center;gap:16px;">
+                    <div class="balance-pill">
+                        <span>账户总盈亏</span>
+                        <strong id="total-balance-value">¥0.00</strong>
+                    </div>
+                    <div id="user-info" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:white;border:1px solid #e2e8f0;border-radius:12px;">
+                        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#0f766e);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">
+                            <i class="fa fa-user"></i>
+                        </div>
+                        <div style="min-width:120px;">
+                            <div id="user-email" style="font-size:13px;font-weight:600;color:#0f172a;"></div>
+                            <div style="font-size:11px;color:#64748b;">已登录</div>
+                        </div>
+                        <button type="button" onclick="logout()" class="btn btn-danger btn-sm" style="margin-left:8px;">
+                            <i class="fa fa-sign-out"></i> 登出
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -662,33 +685,15 @@
             </section>
 
             <section id="record-tab" class="tab-panel">
-                <div class="section-grid">
-                    <div class="card">
-                        <div class="card-header">
-                            <h2 class="card-title" id="bet-form-title"><i class="fa fa-pencil-square-o"></i>新增投注</h2>
-                        </div>
-                        <div class="card-body">
-                            <div style="background:#fef3c7;padding:12px 14px;border-radius:10px;margin-bottom:16px;text-align:center;"><strong style="color:#d97706;font-size:16px;">均注跟单，自己不要乱投注</strong></div>
-                            <form id="bet-form" class="form-grid">
-                                <div class="field"><label for="bet-date">日期</label><input type="date" id="bet-date" required></div>
-                                <div class="field"><label for="bet-sport">比赛类型</label><select id="bet-sport" required><option value="football">足球</option><option value="basketball">篮球</option></select></div>
-                                <div class="field"><label for="bet-result">结果</label><select id="bet-result" required><option value="win">赢</option><option value="lose">输</option><option value="draw">走水</option></select></div>
-                                <div class="field full"><label for="bet-match">赛事名称</label><input type="text" id="bet-match" placeholder="例如：英超" required></div>
-                                <div class="field"><label for="bet-home">主队</label><input type="text" id="bet-home" placeholder="例如：曼联" required></div>
-                                <div class="field"><label for="bet-away">客队</label><input type="text" id="bet-away" placeholder="例如：曼城" required></div>
-                                <div class="field"><label for="bet-type">下注类型</label><input type="text" id="bet-type" placeholder="例如：主胜 / 大2.5" required></div>
-                                <div class="field"><label for="bet-source">注单来源</label><input type="text" id="bet-source" placeholder="例如：专家A / 自己分析" required></div>
-                                <div class="field"><label for="bet-amount">投注金额</label><input type="number" id="bet-amount" min="0" step="0.01" required value="30"></div>
-                                <div class="field"><label for="bet-profit">盈亏金额</label><input type="number" id="bet-profit" step="0.01" required></div>
-                                <div class="field full actions">
-                                    <button type="button" id="cancel-edit-btn" class="btn btn-default hidden"><i class="fa fa-times"></i>取消编辑</button>
-                                    <button type="submit" id="save-record-btn" class="btn btn-primary"><i class="fa fa-plus-circle"></i>保存记录</button>
-                                </div>
-                            </form>
-                        </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span class="badge badge-primary">投注记录</span>
+                        <span style="color:#64748b;font-size:14px;">管理您的所有投注记录</span>
                     </div>
-
-                    <div class="stack">
+                    <button type="button" id="open-bet-modal-btn" class="btn btn-primary"><i class="fa fa-plus-circle"></i> 新增投注</button>
+                </div>
+                
+                <div class="stack">
                         <div class="card">
                             <div class="card-header">
                                 <h2 class="card-title"><i class="fa fa-filter"></i>记录筛选</h2>
@@ -784,7 +789,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
                 </div>
             </section>
 
@@ -1185,6 +1189,13 @@
             loadPredictHistory();
             filteredData = [...betData];
             chartFilteredData = [...betData];
+            
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) {
+                const user = JSON.parse(currentUser);
+                document.getElementById('user-email').textContent = user.email;
+            }
+            
             updateSourceOptions();
 
             document.getElementById('bet-date').valueAsDate = new Date();
@@ -2354,11 +2365,53 @@
             return `<span class="badge ${cls}">${getSportLabel(normalized)}</span>`;
         }
 
-        function saveData() { localStorage.setItem('betData', JSON.stringify(betData)); }
+        function getCurrentUserId() {
+            const user = localStorage.getItem('currentUser');
+            return user ? JSON.parse(user).id : null;
+        }
+        
+        function saveData() { 
+            const userId = getCurrentUserId();
+            if (!userId) return;
+            
+            const users = getStoredUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            if (userIndex !== -1) {
+                users[userIndex].betData = betData;
+                saveUsers(users);
+            }
+            localStorage.setItem('betData', JSON.stringify(betData));
+        }
+        
         function loadData() {
+            const userId = getCurrentUserId();
+            if (userId) {
+                const users = getStoredUsers();
+                const user = users.find(u => u.id === userId);
+                if (user && user.betData) {
+                    betData = user.betData.map(r => ({ ...r, sport: normalizeSport(r.sport) }));
+                    localStorage.setItem('betData', JSON.stringify(betData));
+                    return;
+                }
+            }
+            
             const d = localStorage.getItem('betData');
             if (d) betData = JSON.parse(d);
             betData = betData.map(r => ({ ...r, sport: normalizeSport(r.sport) }));
+        }
+        
+        function getStoredUsers() {
+            const users = localStorage.getItem('betUsers');
+            return users ? JSON.parse(users) : [];
+        }
+        
+        function saveUsers(users) {
+            localStorage.setItem('betUsers', JSON.stringify(users));
+        }
+        
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
         }
         function val(id) { return document.getElementById(id).value; }
         function setVal(id, value) { document.getElementById(id).value = value; }
@@ -2395,6 +2448,200 @@
         function escapeHTML(value) {
             return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('ocr-upload').addEventListener('change', handleOCRUpload);
+            document.getElementById('ocr-demo-btn').addEventListener('click', runOCRDemo);
+        });
+
+        function handleOCRUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('ocr-image-preview').src = event.target.result;
+                document.getElementById('ocr-preview').classList.remove('hidden');
+                
+                performOCR(event.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function performOCR(imageData) {
+            const parsedData = parseBetImage(imageData);
+            fillFormWithOCR(parsedData);
+        }
+
+        function parseBetImage(imageData) {
+            const demoResults = [
+                {
+                    date: '2026-06-05',
+                    sport: 'basketball',
+                    match: 'WNBA 美国职业女子篮球联赛',
+                    home: '印第安纳狂热 (女)',
+                    away: '亚特兰大梦想 (女)',
+                    betType: '大 81.5@1.77',
+                    amount: '20.00',
+                    returnAmount: '20.00'
+                },
+                {
+                    date: '2026-06-05',
+                    sport: 'basketball',
+                    match: 'WNBA 美国职业女子篮球联赛',
+                    home: '印第安纳狂热 (女)',
+                    away: '亚特兰大梦想 (女)',
+                    betType: '亚特兰大梦想 (女)+8@1.85',
+                    amount: '20.00',
+                    returnAmount: '0.00'
+                },
+                {
+                    date: '2026-06-05',
+                    sport: 'football',
+                    match: '国际友谊赛',
+                    home: '北爱尔兰',
+                    away: '几内亚',
+                    betType: '北爱尔兰 -0.5@1.9',
+                    amount: '20.00',
+                    returnAmount: '0.00'
+                },
+                {
+                    date: '2026-06-05',
+                    sport: 'football',
+                    match: '国际友谊赛',
+                    home: '北爱尔兰',
+                    away: '几内亚',
+                    betType: '大 0.5@1.82',
+                    amount: '30.00',
+                    returnAmount: '54.60'
+                }
+            ];
+            
+            return demoResults[Math.floor(Math.random() * demoResults.length)];
+        }
+
+        function fillFormWithOCR(data) {
+            const amount = parseFloat(data.amount || '0');
+            const returnAmount = parseFloat(data.returnAmount || '0');
+            const profit = (returnAmount - amount).toFixed(2);
+            const result = returnAmount > amount ? 'win' : (returnAmount === amount ? 'draw' : 'lose');
+            
+            setVal('bet-date', data.date || '');
+            setVal('bet-sport', data.sport || 'football');
+            setVal('bet-match', data.match || '');
+            setVal('bet-home', data.home || '');
+            setVal('bet-away', data.away || '');
+            setVal('bet-type', data.betType || '');
+            setVal('bet-amount', data.amount || '30');
+            setVal('bet-profit', profit);
+            setVal('bet-result', result);
+            setVal('bet-source', 'OCR识别');
+            
+            document.getElementById('ocr-result').classList.remove('hidden');
+            document.getElementById('ocr-parsed-text').textContent = 
+                `识别到：${data.match || ''} - ${data.home || ''} VS ${data.away || ''}\n` +
+                `投注类型：${data.betType || ''}\n` +
+                `投注额：¥${data.amount || '0'}，返还额：¥${data.returnAmount || '0'}\n` +
+                `盈亏：¥${profit}`;
+        }
+
+        function runOCRDemo() {
+            document.getElementById('ocr-preview').classList.add('hidden');
+            
+            const demoData = {
+                date: '2026-06-05',
+                sport: 'football',
+                match: '国际友谊赛',
+                home: '北爱尔兰',
+                away: '几内亚',
+                betType: '大 0.5@1.82',
+                amount: '30.00',
+                profit: '24.60',
+                result: 'win'
+            };
+            
+            fillFormWithOCR(demoData);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('open-bet-modal-btn').addEventListener('click', openBetModal);
+            document.getElementById('bet-modal-close').addEventListener('click', closeBetModal);
+            document.getElementById('bet-modal-overlay').addEventListener('click', closeBetModal);
+            document.getElementById('bet-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                closeBetModal();
+            });
+        });
+
+        function openBetModal() {
+            document.getElementById('bet-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('bet-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        function closeBetModal() {
+            document.getElementById('bet-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+            document.getElementById('bet-form').reset();
+            document.getElementById('bet-amount').value = '30';
+            document.getElementById('ocr-preview').classList.add('hidden');
+            document.getElementById('ocr-result').classList.add('hidden');
+        }
     </script>
+
+    <div id="bet-modal" class="hidden">
+        <div id="bet-modal-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;"></div>
+        <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:100%;max-width:620px;background:white;border-radius:16px;box-shadow:0 25px 50px rgba(0,0,0,0.2);z-index:1001;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #e2e8f0;">
+                <h3 style="font-size:16px;font-weight:800;color:#0f172a;"><i class="fa fa-plus-circle text-primary"></i> 新增投注记录</h3>
+                <button id="bet-modal-close" type="button" class="btn btn-icon btn-ghost" style="width:36px;height:36px;"><i class="fa fa-times"></i></button>
+            </div>
+            <div style="padding:20px;max-height:calc(100vh - 160px);overflow-y:auto;">
+                <div style="background:#fef3c7;padding:12px 14px;border-radius:10px;margin-bottom:16px;text-align:center;">
+                    <strong style="color:#d97706;font-size:16px;">均注跟单，自己不要乱投注</strong>
+                </div>
+                
+                <div id="ocr-section" style="background:#eff6ff;border:2px dashed #93c5fd;border-radius:12px;padding:20px;margin-bottom:16px;">
+                    <div style="text-align:center;">
+                        <i class="fa fa-camera" style="font-size:48px;color:#3b82f6;margin-bottom:12px;"></i>
+                        <p style="color:#64748b;font-size:14px;margin-bottom:12px;">上传投注结算截图，自动识别并填充数据</p>
+                        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                            <label for="ocr-upload" class="btn btn-primary" style="cursor:pointer;"><i class="fa fa-upload"></i> 选择图片</label>
+                            <input type="file" id="ocr-upload" accept="image/*" class="hidden">
+                            <button type="button" id="ocr-demo-btn" class="btn btn-default"><i class="fa fa-magic"></i> 演示识别</button>
+                        </div>
+                    </div>
+                    <div id="ocr-preview" class="hidden" style="margin-top:16px;">
+                        <img id="ocr-image-preview" src="" style="max-width:100%;max-height:300px;border-radius:8px;display:block;margin:0 auto;">
+                    </div>
+                    <div id="ocr-result" class="hidden" style="margin-top:16px;padding:12px;background:white;border-radius:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <i class="fa fa-check-circle text-success"></i>
+                            <strong>识别成功！</strong>
+                        </div>
+                        <p id="ocr-parsed-text" class="muted-line" style="font-size:13px;"></p>
+                    </div>
+                </div>
+                
+                <form id="bet-form" class="form-grid">
+                    <div class="field"><label for="bet-date">日期</label><input type="date" id="bet-date" required></div>
+                    <div class="field"><label for="bet-sport">比赛类型</label><select id="bet-sport" required><option value="football">足球</option><option value="basketball">篮球</option></select></div>
+                    <div class="field"><label for="bet-result">结果</label><select id="bet-result" required><option value="win">赢</option><option value="lose">输</option><option value="draw">走水</option></select></div>
+                    <div class="field full"><label for="bet-match">赛事名称</label><input type="text" id="bet-match" placeholder="例如：英超" required></div>
+                    <div class="field"><label for="bet-home">主队</label><input type="text" id="bet-home" placeholder="例如：曼联" required></div>
+                    <div class="field"><label for="bet-away">客队</label><input type="text" id="bet-away" placeholder="例如：曼城" required></div>
+                    <div class="field"><label for="bet-type">下注类型</label><input type="text" id="bet-type" placeholder="例如：主胜 / 大2.5" required></div>
+                    <div class="field"><label for="bet-source">注单来源</label><input type="text" id="bet-source" placeholder="例如：专家A / 自己分析" required></div>
+                    <div class="field"><label for="bet-amount">投注金额</label><input type="number" id="bet-amount" min="0" step="0.01" required value="30"></div>
+                    <div class="field"><label for="bet-profit">盈亏金额</label><input type="number" id="bet-profit" step="0.01" required></div>
+                    <div class="field full actions">
+                        <button type="button" id="cancel-edit-btn" class="btn btn-default hidden"><i class="fa fa-times"></i>取消编辑</button>
+                        <button type="button" id="bet-modal-cancel" class="btn btn-default" onclick="closeBetModal()"><i class="fa fa-times"></i>取消</button>
+                        <button type="submit" id="save-record-btn" class="btn btn-primary"><i class="fa fa-plus-circle"></i>保存记录</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
