@@ -908,6 +908,21 @@
                             <p class="muted-line" style="margin-top:8px;">基于球队实力、近期状态、攻防能力、历史交锋记录等多维数据，运用AI算法进行客观赛事预测。</p>
                         </div>
                         <div class="card-body">
+                            <div class="ocr-section" style="margin-bottom:16px;padding:12px;background:#f0f9ff;border-radius:8px;border:2px dashed #0ea5e9;">
+                                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                                    <div style="flex:1;min-width:200px;">
+                                        <label style="font-size:14px;font-weight:600;color:#0369a1;margin-bottom:4px;display:block;">📷 OCR识别赛事数据（支持多张图片）</label>
+                                        <p style="font-size:12px;color:#64748b;">上传赛事数据截图（包含球队、历史交锋、盘口数据等），系统将自动识别并填充表单，支持连续上传多张图片</p>
+                                    </div>
+                                    <input type="file" id="predict-ocr-upload" accept="image/*" multiple style="display:none;">
+                                    <button type="button" id="predict-ocr-btn" class="btn btn-info" onclick="document.getElementById('predict-ocr-upload').click()"><i class="fa fa-upload"></i> 上传图片</button>
+                                    <button type="button" id="predict-ocr-clear" class="btn btn-default" onclick="clearPredictOCRImages()"><i class="fa fa-trash"></i> 清空图片</button>
+                                </div>
+                                <div id="predict-ocr-preview" style="margin-top:12px;display:none;">
+                                    <div id="predict-ocr-images" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px;"></div>
+                                    <div id="predict-ocr-result" style="padding:8px;background:#fff;border-radius:4px;font-size:12px;color:#334155;"></div>
+                                </div>
+                            </div>
                             <form id="predict-form" class="form-grid-3">
                                 <div class="field"><label for="predict-league">联赛/赛事</label><input type="text" id="predict-league" placeholder="例如：英超" required></div>
                                 <div class="field"><label for="predict-home">主队名称</label><input type="text" id="predict-home" placeholder="例如：曼联" required></div>
@@ -995,6 +1010,24 @@
                                                 <div class="field"><label>客队胜</label><input type="number" id="h2h-away" min="0" placeholder="12"></div>
                                                 <div class="field"><label>平局</label><input type="number" id="h2h-draw" min="0" placeholder="8"></div>
                                                 <div class="field"><label>上次胜者</label><select id="h2h-last"><option value="">未知</option><option value="home">主队</option><option value="away">客队</option><option value="draw">平局</option></select></div>
+                                            </div>
+                                        </div>
+                                        <div class="stack-sm" style="padding:12px;background:#f0fdf4;border-radius:8px;margin-top:12px;">
+                                            <h4 style="font-size:14px;font-weight:600;color:#16a34a;margin-bottom:8px;">📊 盘口赔率数据</h4>
+                                            <div class="form-grid-3" style="gap:8px;">
+                                                <div class="field"><label>主胜赔率</label><input type="number" id="odds-home" min="1" step="0.01" placeholder="1.80"></div>
+                                                <div class="field"><label>平局赔率</label><input type="number" id="odds-draw" min="1" step="0.01" placeholder="3.50"></div>
+                                                <div class="field"><label>客胜赔率</label><input type="number" id="odds-away" min="1" step="0.01" placeholder="4.20"></div>
+                                            </div>
+                                            <div class="form-grid-3" style="gap:8px;margin-top:8px;">
+                                                <div class="field"><label>让球盘口</label><input type="text" id="handicap" placeholder="-0.5"></div>
+                                                <div class="field"><label>让球主胜</label><input type="number" id="handicap-home-odds" min="1" step="0.01" placeholder="1.90"></div>
+                                                <div class="field"><label>让球客胜</label><input type="number" id="handicap-away-odds" min="1" step="0.01" placeholder="1.90"></div>
+                                            </div>
+                                            <div class="form-grid-3" style="gap:8px;margin-top:8px;">
+                                                <div class="field"><label>大小球盘口</label><input type="number" id="total-goals" min="0" step="0.5" placeholder="2.5"></div>
+                                                <div class="field"><label>大球赔率</label><input type="number" id="over-odds" min="1" step="0.01" placeholder="1.85"></div>
+                                                <div class="field"><label>小球赔率</label><input type="number" id="under-odds" min="1" step="0.01" placeholder="1.95"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -1833,6 +1866,17 @@
                     awayWins: Number(val('h2h-away')) || null,
                     draws: Number(val('h2h-draw')) || null,
                     last: val('h2h-last') || null
+                },
+                odds: {
+                    home: Number(val('odds-home')) || null,
+                    draw: Number(val('odds-draw')) || null,
+                    away: Number(val('odds-away')) || null,
+                    handicap: val('handicap') || null,
+                    handicapHome: Number(val('handicap-home-odds')) || null,
+                    handicapAway: Number(val('handicap-away-odds')) || null,
+                    totalGoals: Number(val('total-goals')) || null,
+                    over: Number(val('over-odds')) || null,
+                    under: Number(val('under-odds')) || null
                 }
             };
         }
@@ -1954,6 +1998,77 @@
             if (h2hLast === 'home') recentEdge = 5;
             else if (h2hLast === 'away') recentEdge = -5;
             
+            // 基于盘口赔率的自动预测
+            let oddsAnalysis = { recommended: '', confidence: 0, value: 0 };
+            if (userData.odds.home && userData.odds.draw && userData.odds.away) {
+                const impliedHome = 100 / userData.odds.home;
+                const impliedDraw = 100 / userData.odds.draw;
+                const impliedAway = 100 / userData.odds.away;
+                
+                const modelHome = 50 + powerDiff * 0.5 + formDiff * 0.3 + recentEdge + (h2hScore - 50) * 0.25 + homeAdvantage + externalDiff * 0.5;
+                const modelAway = 100 - modelHome;
+                const modelDraw = Math.min(45, Math.max(18, 38 - Math.abs(powerDiff) * 0.25));
+                
+                const homeValue = modelHome - impliedHome;
+                const drawValue = modelDraw - impliedDraw;
+                const awayValue = modelAway - impliedAway;
+                
+                if (homeValue > 10) {
+                    oddsAnalysis = { recommended: 'win', confidence: Math.min(85, 60 + homeValue), value: homeValue };
+                } else if (awayValue > 10) {
+                    oddsAnalysis = { recommended: 'lose', confidence: Math.min(85, 60 + awayValue), value: awayValue };
+                } else if (drawValue > 8) {
+                    oddsAnalysis = { recommended: 'draw', confidence: Math.min(75, 55 + drawValue), value: drawValue };
+                } else {
+                    oddsAnalysis = { recommended: 'win', confidence: Math.max(30, modelHome), value: homeValue };
+                }
+            }
+            
+            // 让球盘分析
+            if (userData.odds.handicap && userData.odds.handicapHome && userData.odds.handicapAway) {
+                const handicap = parseFloat(userData.odds.handicap.replace('+', ''));
+                const handicapHomeOdds = userData.odds.handicapHome;
+                const handicapAwayOdds = userData.odds.handicapAway;
+                
+                const adjustedHomeScore = homeStrengthScore - handicap * 5;
+                const adjustedAwayScore = awayStrengthScore;
+                
+                if (handicap > 0) {
+                    if (adjustedHomeScore > adjustedAwayScore + 10 && handicapHomeOdds < 2.0) {
+                        oddsAnalysis = { recommended: 'win', confidence: Math.min(80, oddsAnalysis.confidence + 5), value: oddsAnalysis.value + 3 };
+                    } else if (adjustedAwayScore > adjustedHomeScore + 5 && handicapAwayOdds < 2.0) {
+                        oddsAnalysis = { recommended: 'lose', confidence: Math.min(80, oddsAnalysis.confidence + 5), value: oddsAnalysis.value + 3 };
+                    }
+                } else if (handicap < 0) {
+                    if (adjustedAwayScore > adjustedHomeScore + 10 && handicapAwayOdds < 2.0) {
+                        oddsAnalysis = { recommended: 'lose', confidence: Math.min(80, oddsAnalysis.confidence + 5), value: oddsAnalysis.value + 3 };
+                    } else if (adjustedHomeScore > adjustedAwayScore + 5 && handicapHomeOdds < 2.0) {
+                        oddsAnalysis = { recommended: 'win', confidence: Math.min(80, oddsAnalysis.confidence + 5), value: oddsAnalysis.value + 3 };
+                    }
+                }
+            }
+            
+            // 大小球盘分析
+            if (userData.odds.totalGoals && userData.odds.over && userData.odds.under) {
+                const totalGoals = userData.odds.totalGoals;
+                const overOdds = userData.odds.over;
+                const underOdds = userData.odds.under;
+                
+                const goalsDiff = totalExpectedGoals - totalGoals;
+                const avgBigRate = (homeBigRate + awayBigRate) / 2;
+                
+                if (goalsDiff > 0.5 && overOdds < 2.0) {
+                    oddsAnalysis = { recommended: 'big', confidence: Math.min(85, 55 + goalsDiff * 10 + avgBigRate * 0.2), value: goalsDiff * 5 };
+                } else if (goalsDiff < -0.5 && underOdds < 2.0) {
+                    oddsAnalysis = { recommended: 'small', confidence: Math.min(85, 55 + Math.abs(goalsDiff) * 10 + (100 - avgBigRate) * 0.2), value: Math.abs(goalsDiff) * 5 };
+                }
+            }
+            
+            // 如果有盘口推荐，自动选择推荐类型
+            if (oddsAnalysis.recommended && predictType === 'win') {
+                predictType = oddsAnalysis.recommended;
+            }
+            
             let baseConfidence;
             let resultText, riskText, upsetRate, hotColdStatus, positionSuggest;
             
@@ -1961,16 +2076,31 @@
             
             if (predictType === 'win') {
                 baseConfidence = 50 + powerDiff * 0.5 + formDiff * 0.3 + recentEdge + (h2hScore - 50) * 0.25 + homeAdvantage + externalDiff * 0.5;
+                if (oddsAnalysis.recommended === 'win') {
+                    baseConfidence = Math.max(baseConfidence, oddsAnalysis.confidence);
+                }
             } else if (predictType === 'lose') {
                 baseConfidence = 50 - powerDiff * 0.5 - formDiff * 0.3 - recentEdge - (h2hScore - 50) * 0.25 - homeAdvantage - externalDiff * 0.5;
+                if (oddsAnalysis.recommended === 'lose') {
+                    baseConfidence = Math.max(baseConfidence, oddsAnalysis.confidence);
+                }
             } else if (predictType === 'draw') {
                 const balance = Math.abs(powerDiff) + Math.abs(formDiff) + Math.abs(externalDiff);
                 const drawProb = Math.min(45, Math.max(18, 38 - balance * 0.25));
                 baseConfidence = drawProb + ((h2hDraws || 0) > 0 ? 8 : 0);
+                if (oddsAnalysis.recommended === 'draw') {
+                    baseConfidence = Math.max(baseConfidence, oddsAnalysis.confidence);
+                }
             } else if (predictType === 'big') {
                 baseConfidence = Math.min(90, Math.max(28, totalExpectedGoals * 22 + avgBigRate * 0.25 + (externalDiff > 0 ? 5 : externalDiff < 0 ? -5 : 0)));
+                if (oddsAnalysis.recommended === 'big') {
+                    baseConfidence = Math.max(baseConfidence, oddsAnalysis.confidence);
+                }
             } else {
                 baseConfidence = Math.min(90, Math.max(28, 100 - totalExpectedGoals * 18 - avgBigRate * 0.2 - (externalDiff > 0 ? 3 : 0)));
+                if (oddsAnalysis.recommended === 'small') {
+                    baseConfidence = Math.max(baseConfidence, oddsAnalysis.confidence);
+                }
             }
             
             baseConfidence = Math.min(95, Math.max(18, baseConfidence));
@@ -1980,6 +2110,8 @@
             let totalFields = 0;
             Object.values(userData.home).forEach(v => { if (v !== null && v !== '') userInputCount++; totalFields++; });
             Object.values(userData.away).forEach(v => { if (v !== null && v !== '') userInputCount++; totalFields++; });
+            Object.values(userData.h2h).forEach(v => { if (v !== null && v !== '') userInputCount++; totalFields++; });
+            Object.values(userData.odds).forEach(v => { if (v !== null && v !== '') userInputCount++; totalFields++; });
             dataQuality = 0.5 + (userInputCount / totalFields) * 0.5;
             baseConfidence = baseConfidence * dataQuality;
             
@@ -2524,7 +2656,48 @@
             fillFormWithOCR(parsedData);
         }
 
+        async function callBaiduOCR(imageData) {
+            const base64Image = imageData.split(',')[1];
+            const url = '/api/ocr';
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: base64Image })
+            });
+            
+            return await response.json();
+        }
+
         async function parseBetImage(imageData) {
+            let text = '';
+            
+            console.log('尝试调用百度OCR（通过本地代理）');
+            try {
+                console.log('步骤1: 调用本地代理OCR接口');
+                const result = await callBaiduOCR(imageData);
+                console.log('OCR接口返回:', JSON.stringify(result));
+                
+                if (result.words_result && result.words_result.length > 0) {
+                    text = result.words_result.map(item => item.words).join('\n');
+                    console.log('百度OCR识别成功:', text);
+                } else {
+                    console.log('百度OCR未识别到内容或调用失败，使用本地OCR');
+                    text = await fallbackToLocalOCR(imageData);
+                }
+            } catch (error) {
+                console.error('百度OCR调用失败:', error.message || error);
+                console.error('错误详情:', error);
+                text = await fallbackToLocalOCR(imageData);
+            }
+            
+            console.log('OCR识别原始文本:', text);
+            return parseBetText(text);
+        }
+
+        async function fallbackToLocalOCR(imageData) {
             try {
                 const { createWorker } = Tesseract;
                 const worker = await createWorker('chi_sim+eng', 1, {
@@ -2541,11 +2714,10 @@
                 const { data: { text } } = await worker.recognize(processedImage || imageData);
                 await worker.terminate();
                 
-                console.log('OCR识别原始文本:', text);
-                return parseBetText(text);
+                return text;
             } catch (error) {
-                console.error('OCR识别失败:', error);
-                return parseBetText('');
+                console.error('本地OCR识别失败:', error);
+                return '';
             }
         }
 
@@ -2680,18 +2852,32 @@
 
             const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             
+            console.log('OCR原始文本行:', lines);
+            
             const dateRegex = /(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})[日号]?/;
             const dateShortRegex = /(\d{2})[-/](\d{2})[-/](\d{2})/;
+            
             const amountRegex = /投注额\s*[：:]\s*([\d.]+)/i;
             const returnRegex = /返还额\s*[：:]\s*([\d.]+)/i;
+            
+            const amountRegex2 = /投注\s*[：:]\s*([\d.]+)/i;
+            const returnRegex2 = /返还\s*[：:]\s*([\d.]+)/i;
+            
+            const amountRegex3 = /(\d+\.\d{2})\s*投注/i;
+            const returnRegex3 = /(\d+\.\d{2})\s*返还/i;
+            
             const amountAltRegex = /(\d+\.\d{2})\s*[\u5143圆元$]/i;
+            const amountSimpleRegex = /(\d+\.\d{2})/g;
+            
             const vsRegex = /(.+?)\s*[Vv][Ss]\s*(.+)/;
+            const vsRegex2 = /(.+?)\s*(对|vs|VS|V.S.|V S)\s*(.+)/i;
             const betTypeRegex = /(大|小|让球|胜负|平|独赢|波胆|比分|半全场|总进球|角球|大小球)\s*[\d.]+@[\d.]+/;
             const oddsRegex = /[\d.]+@[\d.]+/;
 
             let vsLine = '';
             let amountCandidates = [];
             let returnCandidates = [];
+            let allNumbers = [];
             
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
@@ -2725,6 +2911,34 @@
                     result.returnAmount = returnMatch[1];
                 }
 
+                if (!result.amount) {
+                    const amountMatch2 = line.match(amountRegex2);
+                    if (amountMatch2) {
+                        result.amount = amountMatch2[1];
+                    }
+                }
+
+                if (!result.returnAmount) {
+                    const returnMatch2 = line.match(returnRegex2);
+                    if (returnMatch2) {
+                        result.returnAmount = returnMatch2[1];
+                    }
+                }
+
+                if (!result.amount) {
+                    const amountMatch3 = line.match(amountRegex3);
+                    if (amountMatch3) {
+                        result.amount = amountMatch3[1];
+                    }
+                }
+
+                if (!result.returnAmount) {
+                    const returnMatch3 = line.match(returnRegex3);
+                    if (returnMatch3) {
+                        result.returnAmount = returnMatch3[1];
+                    }
+                }
+
                 if (!result.amount && line.includes('投注')) {
                     const numMatch = line.match(/(\d+\.\d{2})/);
                     if (numMatch) {
@@ -2752,11 +2966,25 @@
                     }
                 }
 
-                const vsMatch = line.match(vsRegex);
+                const allNumMatch = line.match(amountSimpleRegex);
+                if (allNumMatch) {
+                    allNumMatch.forEach(num => {
+                        const value = parseFloat(num);
+                        if (value > 0 && value <= 10000) {
+                            allNumbers.push(value);
+                        }
+                    });
+                }
+
+                let vsMatch = line.match(vsRegex);
+                if (!vsMatch) {
+                    vsMatch = line.match(vsRegex2);
+                }
+                
                 if (vsMatch) {
                     vsLine = line;
                     let home = vsMatch[1].trim();
-                    let away = vsMatch[2].trim();
+                    let away = vsMatch[vsMatch.length - 1].trim();
                     
                     home = home.replace(/^\s*[-+*/\\|#@$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]\s*/, '').trim();
                     away = away.replace(/^\s*[-+*/\\|#@$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]\s*/, '').trim();
@@ -2791,6 +3019,68 @@
             if (!result.returnAmount && returnCandidates.length > 0) {
                 result.returnAmount = String(returnCandidates[0]);
             }
+
+            if (!result.amount || !result.returnAmount) {
+                console.log('候选数字列表:', allNumbers);
+                
+                const validAmounts = allNumbers.filter(num => {
+                    if (num < 0.01) return false;
+                    if (num > 10000) return false;
+                    if (num < 1 && num > 0) return false;
+                    if (num >= 1 && num <= 24 && num % 1 === 0) {
+                        return false;
+                    }
+                    
+                    const numStr = String(num);
+                    const parts = numStr.split('.');
+                    if (parts.length === 2) {
+                        const integerPart = parseInt(parts[0]);
+                        const decimalPart = parseInt(parts[1]);
+                        
+                        if (integerPart >= 0 && integerPart <= 23 && decimalPart >= 0 && decimalPart <= 59) {
+                            if (decimalPart > 0 || (integerPart >= 0 && integerPart <= 12)) {
+                                return false;
+                            }
+                        }
+                    }
+                    
+                    return true;
+                });
+                
+                console.log('过滤后的有效金额:', validAmounts);
+                
+                const sortedNumbers = [...new Set(validAmounts)].sort((a, b) => a - b);
+                
+                if (sortedNumbers.length >= 2) {
+                    const smaller = sortedNumbers[0];
+                    const larger = sortedNumbers[sortedNumbers.length - 1];
+                    
+                    if (!result.amount) {
+                        result.amount = String(smaller);
+                    }
+                    if (!result.returnAmount) {
+                        result.returnAmount = String(larger);
+                    }
+                } else if (sortedNumbers.length === 1) {
+                    if (!result.amount) {
+                        result.amount = String(sortedNumbers[0]);
+                    }
+                    if (!result.returnAmount) {
+                        result.returnAmount = String(sortedNumbers[0]);
+                    }
+                }
+                
+                const finalAmount = parseFloat(result.amount || '0');
+                const finalReturn = parseFloat(result.returnAmount || '0');
+                
+                if (finalAmount > 0 && finalReturn > 0 && finalAmount > finalReturn) {
+                    const temp = result.amount;
+                    result.amount = result.returnAmount;
+                    result.returnAmount = temp;
+                }
+            }
+
+            console.log('最终识别结果:', result);
 
             if (!result.match && result.home && result.away) {
                 result.match = `${result.home} VS ${result.away}`;
@@ -2835,6 +3125,7 @@
             
             document.getElementById('ocr-result').classList.remove('hidden');
             document.getElementById('ocr-parsed-text').textContent = 
+                `【百度智能云OCR识别】\n` +
                 `识别到：${data.match || ''} - ${data.home || ''} VS ${data.away || ''}\n` +
                 `投注类型：${data.betType || ''}\n` +
                 `投注额：¥${data.amount || '0'}，返还额：¥${data.returnAmount || '0'}\n` +
@@ -2857,6 +3148,289 @@
             };
             
             fillFormWithOCR(demoData);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('predict-ocr-upload').addEventListener('change', handlePredictOCRUpload);
+        });
+
+        let predictOCRImages = [];
+        let predictOCRResults = [];
+
+        function handlePredictOCRUpload(e) {
+            const files = Array.from(e.target.files);
+            if (!files || files.length === 0) return;
+            
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    predictOCRImages.push(event.target.result);
+                    updatePredictOCRPreview();
+                    
+                    performPredictOCR(event.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            e.target.value = '';
+        }
+
+        function updatePredictOCRPreview() {
+            const container = document.getElementById('predict-ocr-images');
+            const preview = document.getElementById('predict-ocr-preview');
+            
+            if (predictOCRImages.length === 0) {
+                preview.style.display = 'none';
+                return;
+            }
+            
+            preview.style.display = 'block';
+            container.innerHTML = predictOCRImages.map((img, index) => `
+                <div style="position:relative;">
+                    <img src="${img}" style="width:100%;height:100px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;">
+                    <button onclick="removePredictOCRImage(${index})" style="position:absolute;top:4px;right:4px;background:rgba(239,68,68,0.9);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;">×</button>
+                </div>
+            `).join('');
+        }
+
+        function removePredictOCRImage(index) {
+            predictOCRImages.splice(index, 1);
+            predictOCRResults.splice(index, 1);
+            updatePredictOCRPreview();
+        }
+
+        function clearPredictOCRImages() {
+            predictOCRImages = [];
+            predictOCRResults = [];
+            updatePredictOCRPreview();
+            document.getElementById('predict-ocr-result').innerHTML = '';
+        }
+
+        async function performPredictOCR(imageData) {
+            const parsedData = await parsePredictImage(imageData);
+            predictOCRResults.push(parsedData);
+            fillPredictFormWithOCR(parsedData);
+        }
+
+        async function parsePredictImage(imageData) {
+            let text = '';
+            
+            console.log('尝试调用百度OCR（AI预测）');
+            try {
+                const result = await callBaiduOCR(imageData);
+                console.log('OCR接口返回:', JSON.stringify(result));
+                
+                if (result.words_result && result.words_result.length > 0) {
+                    text = result.words_result.map(item => item.words).join('\n');
+                    console.log('百度OCR识别成功:', text);
+                } else {
+                    text = await fallbackToLocalOCR(imageData);
+                }
+            } catch (error) {
+                console.error('百度OCR调用失败:', error);
+                text = await fallbackToLocalOCR(imageData);
+            }
+            
+            console.log('OCR识别原始文本:', text);
+            return parsePredictText(text);
+        }
+
+        function parsePredictText(text) {
+            const result = {
+                league: '',
+                home: '',
+                away: '',
+                homeWinRate: '',
+                homeDrawRate: '',
+                homeGoals: '',
+                homeConcede: '',
+                homeBigRate: '',
+                awayWinRate: '',
+                awayDrawRate: '',
+                awayGoals: '',
+                awayConcede: '',
+                awayBigRate: '',
+                h2hHome: '',
+                h2hAway: '',
+                h2hDraw: '',
+                oddsHome: '',
+                oddsDraw: '',
+                oddsAway: '',
+                handicap: '',
+                handicapHomeOdds: '',
+                handicapAwayOdds: '',
+                totalGoals: '',
+                overOdds: '',
+                underOdds: ''
+            };
+
+            if (!text || text.trim() === '') {
+                return result;
+            }
+
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            console.log('AI预测OCR原始文本行:', lines);
+
+            const vsRegex = /(.+?)\s*[Vv][Ss]\s*(.+)/;
+            const vsRegex2 = /(.+?)\s*(对|vs|VS|V.S.|V S)\s*(.+)/i;
+            const winRateRegex = /胜率\s*[：:]\s*([\d.]+)%?/i;
+            const drawRateRegex = /平率\s*[：:]\s*([\d.]+)%?/i;
+            const goalRegex = /进失?\s*[：:]\s*([\d.]+)/i;
+            const bigRateRegex = /大[球]?率\s*[：:]\s*([\d.]+)%?/i;
+            const h2hRegex = /(\d+)\s*胜\s*(\d+)\s*平\s*(\d+)\s*负/i;
+            const oddsRegex = /([\d.]+)\s*[\s/]\s*([\d.]+)\s*[\s/]\s*([\d.]+)/;
+            const handicapRegex = /[-+]?\d+\.?\d*\s*@\s*(\d+\.\d+)/;
+            const totalGoalsRegex = /(\d+\.?\d*)\s*球\s*(\d+\.\d+)\s*(\d+\.\d+)/;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
+                let vsMatch = line.match(vsRegex);
+                if (!vsMatch) {
+                    vsMatch = line.match(vsRegex2);
+                }
+                
+                if (vsMatch && !result.home && !result.away) {
+                    let home = vsMatch[1].trim();
+                    let away = vsMatch[vsMatch.length - 1].trim();
+                    home = home.replace(/^\s*[-+*/\\|#@$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]\s*/, '').trim();
+                    away = away.replace(/^\s*[-+*/\\|#@$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]\s*/, '').trim();
+                    if (home.length > 1 && away.length > 1) {
+                        result.home = home;
+                        result.away = away;
+                    }
+                }
+
+                const winRateMatch = line.match(winRateRegex);
+                if (winRateMatch) {
+                    if (!result.homeWinRate && (line.includes('主队') || line.includes('近') || i < lines.length / 2)) {
+                        result.homeWinRate = winRateMatch[1];
+                    } else if (!result.awayWinRate) {
+                        result.awayWinRate = winRateMatch[1];
+                    }
+                }
+
+                const drawRateMatch = line.match(drawRateRegex);
+                if (drawRateMatch) {
+                    if (!result.homeDrawRate) {
+                        result.homeDrawRate = drawRateMatch[1];
+                    } else if (!result.awayDrawRate) {
+                        result.awayDrawRate = drawRateMatch[1];
+                    }
+                }
+
+                const goalMatch = line.match(goalRegex);
+                if (goalMatch) {
+                    const goals = line.split('进').pop()?.split('失');
+                    if (goals && goals.length >= 2) {
+                        const scored = goals[0]?.match(/[\d.]+/)?.[0];
+                        const conceded = goals[1]?.match(/[\d.]+/)?.[0];
+                        if (!result.homeGoals && (line.includes('主队') || i < lines.length / 2)) {
+                            result.homeGoals = scored;
+                            result.homeConcede = conceded;
+                        } else if (!result.awayGoals) {
+                            result.awayGoals = scored;
+                            result.awayConcede = conceded;
+                        }
+                    }
+                }
+
+                const bigRateMatch = line.match(bigRateRegex);
+                if (bigRateMatch) {
+                    if (!result.homeBigRate) {
+                        result.homeBigRate = bigRateMatch[1];
+                    } else if (!result.awayBigRate) {
+                        result.awayBigRate = bigRateMatch[1];
+                    }
+                }
+
+                const h2hMatch = line.match(h2hRegex);
+                if (h2hMatch) {
+                    result.h2hHome = h2hMatch[1];
+                    result.h2hDraw = h2hMatch[2];
+                    result.h2hAway = h2hMatch[3];
+                }
+
+                const oddsMatch = line.match(oddsRegex);
+                if (oddsMatch && !result.oddsHome) {
+                    result.oddsHome = oddsMatch[1];
+                    result.oddsDraw = oddsMatch[2];
+                    result.oddsAway = oddsMatch[3];
+                }
+
+                const handicapMatch = line.match(handicapRegex);
+                if (handicapMatch && !result.handicap) {
+                    const handicapValue = line.match(/[-+]?\d+\.?\d*/)?.[0];
+                    result.handicap = handicapValue || '';
+                    result.handicapHomeOdds = handicapMatch[1];
+                    result.handicapAwayOdds = line.match(/@?\s*(\d+\.\d+)/)?.[1] || '';
+                }
+
+                const totalGoalsMatch = line.match(totalGoalsRegex);
+                if (totalGoalsMatch && !result.totalGoals) {
+                    result.totalGoals = totalGoalsMatch[1];
+                    result.overOdds = totalGoalsMatch[2];
+                    result.underOdds = totalGoalsMatch[3];
+                }
+
+                if (line.includes('联赛') || line.includes('杯') || line.includes('友谊赛')) {
+                    result.league = line.trim();
+                }
+            }
+
+            console.log('AI预测识别结果:', result);
+            return result;
+        }
+
+        function fillPredictFormWithOCR(data) {
+            setVal('predict-league', data.league || '');
+            setVal('predict-home', data.home || '');
+            setVal('predict-away', data.away || '');
+            
+            if (data.homeWinRate) setVal('home-win-rate', data.homeWinRate);
+            if (data.homeDrawRate) setVal('home-draw-rate', data.homeDrawRate);
+            if (data.homeGoals) setVal('home-goals', data.homeGoals);
+            if (data.homeConcede) setVal('home-concede', data.homeConcede);
+            if (data.homeBigRate) setVal('home-big-rate', data.homeBigRate);
+            
+            if (data.awayWinRate) setVal('away-win-rate', data.awayWinRate);
+            if (data.awayDrawRate) setVal('away-draw-rate', data.awayDrawRate);
+            if (data.awayGoals) setVal('away-goals', data.awayGoals);
+            if (data.awayConcede) setVal('away-concede', data.awayConcede);
+            if (data.awayBigRate) setVal('away-big-rate', data.awayBigRate);
+            
+            if (data.h2hHome) setVal('h2h-home', data.h2hHome);
+            if (data.h2hAway) setVal('h2h-away', data.h2hAway);
+            if (data.h2hDraw) setVal('h2h-draw', data.h2hDraw);
+            
+            if (data.oddsHome) setVal('odds-home', data.oddsHome);
+            if (data.oddsDraw) setVal('odds-draw', data.oddsDraw);
+            if (data.oddsAway) setVal('odds-away', data.oddsAway);
+            
+            if (data.handicap) setVal('handicap', data.handicap);
+            if (data.handicapHomeOdds) setVal('handicap-home-odds', data.handicapHomeOdds);
+            if (data.handicapAwayOdds) setVal('handicap-away-odds', data.handicapAwayOdds);
+            
+            if (data.totalGoals) setVal('total-goals', data.totalGoals);
+            if (data.overOdds) setVal('over-odds', data.overOdds);
+            if (data.underOdds) setVal('under-odds', data.underOdds);
+
+            const resultHTML = 
+                `<strong>【百度智能云OCR识别】</strong><br>` +
+                `<strong>联赛:</strong> ${data.league || '未识别'}<br>` +
+                `<strong>主队:</strong> ${data.home || '未识别'}<br>` +
+                `<strong>客队:</strong> ${data.away || '未识别'}<br>` +
+                `<strong>主队胜率:</strong> ${data.homeWinRate || '未识别'}%<br>` +
+                `<strong>客队胜率:</strong> ${data.awayWinRate || '未识别'}%<br>` +
+                `<strong>历史交锋:</strong> 主${data.h2hHome || '?'}胜 ${data.h2hDraw || '?'}平 客${data.h2hAway || '?'}胜<br>` +
+                `<strong>盘口赔率:</strong> 主${data.oddsHome || '?'} 平${data.oddsDraw || '?'} 客${data.oddsAway || '?'}<br>` +
+                `<strong>让球:</strong> ${data.handicap || '?'} (${data.handicapHomeOdds || '?'} / ${data.handicapAwayOdds || '?'})<br>` +
+                `<strong>大小球:</strong> ${data.totalGoals || '?'}球 (大${data.overOdds || '?'} / 小${data.underOdds || '?'})`;
+
+            document.getElementById('predict-ocr-result').innerHTML = resultHTML;
+            document.getElementById('team-data-panel').classList.remove('hidden');
+            document.getElementById('team-data-toggle').textContent = '收起 ▲';
         }
 
         document.addEventListener('DOMContentLoaded', function() {
