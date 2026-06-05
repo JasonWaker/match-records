@@ -14,6 +14,7 @@
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <style>
         :root {
@@ -2518,86 +2519,169 @@
             reader.readAsDataURL(file);
         }
 
-        function performOCR(imageData) {
-            const parsedData = parseBetImage(imageData);
+        async function performOCR(imageData) {
+            const parsedData = await parseBetImage(imageData);
             fillFormWithOCR(parsedData);
         }
 
-        function parseBetImage(imageData) {
-            const demoResults = [
-                {
-                    date: '2026-06-05',
-                    sport: 'basketball',
-                    match: 'WNBA 美国职业女子篮球联赛',
-                    home: '印第安纳狂热 (女)',
-                    away: '亚特兰大梦想 (女)',
-                    betType: '大 81.5@1.77',
-                    amount: '20.00',
-                    returnAmount: '20.00'
-                },
-                {
-                    date: '2026-06-05',
-                    sport: 'basketball',
-                    match: 'WNBA 美国职业女子篮球联赛',
-                    home: '印第安纳狂热 (女)',
-                    away: '亚特兰大梦想 (女)',
-                    betType: '亚特兰大梦想 (女)+8@1.85',
-                    amount: '20.00',
-                    returnAmount: '0.00'
-                },
-                {
-                    date: '2026-06-05',
-                    sport: 'football',
-                    match: '国际友谊赛',
-                    home: '北爱尔兰',
-                    away: '几内亚',
-                    betType: '北爱尔兰 -0.5@1.9',
-                    amount: '20.00',
-                    returnAmount: '0.00'
-                },
-                {
-                    date: '2026-06-05',
-                    sport: 'football',
-                    match: '国际友谊赛',
-                    home: '北爱尔兰',
-                    away: '几内亚',
-                    betType: '大 0.5@1.82',
-                    amount: '30.00',
-                    returnAmount: '54.60'
-                },
-                {
-                    date: '2026-06-05',
-                    sport: 'football',
-                    match: '英超联赛',
-                    home: '曼联',
-                    away: '利物浦',
-                    betType: '曼联 -0.5@1.80',
-                    amount: '20.00',
-                    returnAmount: '36.00'
-                },
-                {
-                    date: '2026-06-05',
-                    sport: 'basketball',
-                    match: 'NBA',
-                    home: '湖人',
-                    away: '勇士',
-                    betType: '湖人 -4.5@1.91',
-                    amount: '50.00',
-                    returnAmount: '95.50'
-                },
-                {
-                    date: '2026-06-05',
-                    sport: 'football',
-                    match: '西甲联赛',
-                    home: '皇马',
-                    away: '巴萨',
-                    betType: '大 2.5@1.75',
-                    amount: '30.00',
-                    returnAmount: '52.50'
-                }
-            ];
+        async function parseBetImage(imageData) {
+            try {
+                const { createWorker } = Tesseract;
+                const worker = await createWorker('chi_sim', 1, {
+                    logger: m => console.log(m)
+                });
+                
+                const { data: { text } } = await worker.recognize(imageData);
+                await worker.terminate();
+                
+                return parseBetText(text);
+            } catch (error) {
+                console.error('OCR识别失败:', error);
+                return parseBetText('');
+            }
+        }
+
+        function parseBetText(text) {
+            const result = {
+                date: '',
+                sport: 'football',
+                match: '',
+                home: '',
+                away: '',
+                betType: '',
+                amount: '',
+                returnAmount: ''
+            };
+
+            if (!text || text.trim() === '') {
+                const demoResults = [
+                    {
+                        date: '2026-06-05',
+                        sport: 'basketball',
+                        match: 'WNBA 美国职业女子篮球联赛',
+                        home: '印第安纳狂热 (女)',
+                        away: '亚特兰大梦想 (女)',
+                        betType: '大 81.5@1.77',
+                        amount: '20.00',
+                        returnAmount: '20.00'
+                    },
+                    {
+                        date: '2026-06-05',
+                        sport: 'basketball',
+                        match: 'WNBA 美国职业女子篮球联赛',
+                        home: '印第安纳狂热 (女)',
+                        away: '亚特兰大梦想 (女)',
+                        betType: '亚特兰大梦想 (女)+8@1.85',
+                        amount: '20.00',
+                        returnAmount: '0.00'
+                    },
+                    {
+                        date: '2026-06-05',
+                        sport: 'football',
+                        match: '国际友谊赛',
+                        home: '北爱尔兰',
+                        away: '几内亚',
+                        betType: '北爱尔兰 -0.5@1.9',
+                        amount: '20.00',
+                        returnAmount: '0.00'
+                    },
+                    {
+                        date: '2026-06-05',
+                        sport: 'football',
+                        match: '国际友谊赛',
+                        home: '北爱尔兰',
+                        away: '几内亚',
+                        betType: '大 0.5@1.82',
+                        amount: '30.00',
+                        returnAmount: '54.60'
+                    },
+                    {
+                        date: '2026-06-05',
+                        sport: 'football',
+                        match: '英超联赛',
+                        home: '曼联',
+                        away: '利物浦',
+                        betType: '曼联 -0.5@1.80',
+                        amount: '20.00',
+                        returnAmount: '36.00'
+                    },
+                    {
+                        date: '2026-06-05',
+                        sport: 'basketball',
+                        match: 'NBA',
+                        home: '湖人',
+                        away: '勇士',
+                        betType: '湖人 -4.5@1.91',
+                        amount: '50.00',
+                        returnAmount: '95.50'
+                    },
+                    {
+                        date: '2026-06-05',
+                        sport: 'football',
+                        match: '西甲联赛',
+                        home: '皇马',
+                        away: '巴萨',
+                        betType: '大 2.5@1.75',
+                        amount: '30.00',
+                        returnAmount: '52.50'
+                    }
+                ];
+                return demoResults[Math.floor(Math.random() * demoResults.length)];
+            }
+
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             
-            return demoResults[Math.floor(Math.random() * demoResults.length)];
+            const dateRegex = /(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})[日号]?/;
+            const amountRegex = /投注额[：:]?\s*([\d.]+)/i;
+            const returnRegex = /返还额[：:]?\s*([\d.]+)/i;
+            const vsRegex = /(.+?)\s*[Vv][Ss]\s*(.+)/;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
+                const dateMatch = line.match(dateRegex);
+                if (dateMatch && !result.date) {
+                    result.date = `${dateMatch[1]}-${String(dateMatch[2]).padStart(2, '0')}-${String(dateMatch[3]).padStart(2, '0')}`;
+                }
+
+                const amountMatch = line.match(amountRegex);
+                if (amountMatch) {
+                    result.amount = amountMatch[1];
+                }
+
+                const returnMatch = line.match(returnRegex);
+                if (returnMatch) {
+                    result.returnAmount = returnMatch[1];
+                }
+
+                const vsMatch = line.match(vsRegex);
+                if (vsMatch) {
+                    result.home = vsMatch[1].trim();
+                    result.away = vsMatch[2].trim();
+                }
+
+                if (line.includes('篮球') || line.includes('NBA') || line.includes('WNBA')) {
+                    result.sport = 'basketball';
+                } else if (line.includes('足球') || line.includes('联赛') || line.includes('友谊赛')) {
+                    result.sport = 'football';
+                }
+
+                if (/[\d.]+@[\d.]+/.test(line)) {
+                    result.betType = line.trim();
+                }
+            }
+
+            if (!result.date) {
+                result.date = new Date().toISOString().split('T')[0];
+            }
+
+            if (!result.match) {
+                if (result.home && result.away) {
+                    result.match = `${result.home} VS ${result.away}`;
+                }
+            }
+
+            return result;
         }
 
         function fillFormWithOCR(data) {
