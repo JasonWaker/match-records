@@ -2682,13 +2682,16 @@
             
             const dateRegex = /(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})[日号]?/;
             const dateShortRegex = /(\d{2})[-/](\d{2})[-/](\d{2})/;
-            const amountRegex = /投注额[：:]?\s*([\d.]+)/i;
-            const returnRegex = /返还额[：:]?\s*([\d.]+)/i;
+            const amountRegex = /投注额\s*[：:]\s*([\d.]+)/i;
+            const returnRegex = /返还额\s*[：:]\s*([\d.]+)/i;
+            const amountAltRegex = /(\d+\.\d{2})\s*[\u5143圆元$]/i;
             const vsRegex = /(.+?)\s*[Vv][Ss]\s*(.+)/;
             const betTypeRegex = /(大|小|让球|胜负|平|独赢|波胆|比分|半全场|总进球|角球|大小球)\s*[\d.]+@[\d.]+/;
             const oddsRegex = /[\d.]+@[\d.]+/;
 
             let vsLine = '';
+            let amountCandidates = [];
+            let returnCandidates = [];
             
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
@@ -2722,6 +2725,33 @@
                     result.returnAmount = returnMatch[1];
                 }
 
+                if (!result.amount && line.includes('投注')) {
+                    const numMatch = line.match(/(\d+\.\d{2})/);
+                    if (numMatch) {
+                        result.amount = numMatch[1];
+                    }
+                }
+
+                if (!result.returnAmount && line.includes('返还')) {
+                    const numMatch = line.match(/(\d+\.\d{2})/);
+                    if (numMatch) {
+                        result.returnAmount = numMatch[1];
+                    }
+                }
+
+                const altMatch = line.match(amountAltRegex);
+                if (altMatch) {
+                    const value = parseFloat(altMatch[1]);
+                    if (value > 0) {
+                        if (!result.amount && value >= 0) {
+                            amountCandidates.push(value);
+                        }
+                        if (!result.returnAmount && value >= 0) {
+                            returnCandidates.push(value);
+                        }
+                    }
+                }
+
                 const vsMatch = line.match(vsRegex);
                 if (vsMatch) {
                     vsLine = line;
@@ -2753,6 +2783,13 @@
                 if (line.includes('国际友谊赛') || line.includes('友谊赛') || line.includes('联赛')) {
                     result.match = line.trim();
                 }
+            }
+
+            if (!result.amount && amountCandidates.length > 0) {
+                result.amount = String(amountCandidates[0]);
+            }
+            if (!result.returnAmount && returnCandidates.length > 0) {
+                result.returnAmount = String(returnCandidates[0]);
             }
 
             if (!result.match && result.home && result.away) {
