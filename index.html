@@ -614,6 +614,23 @@
             .actions { justify-content: stretch; }
             .actions .btn { width: 100%; }
         }
+        
+        @keyframes danmakuMove {
+            0% {
+                transform: translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(-150vw);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1261,10 +1278,16 @@
             }
             saveData();
             resetBetForm();
+            closeBetModal();
+            loadData();
+            filteredData = [...betData];
+            chartFilteredData = [...betData];
             initChartDefaultDate();
             updateSourceOptions();
             refreshRecordFilter(false);
             renderAll();
+            updateKPIs();
+            updateAnalysisSummary();
             alert(wasEditing ? '更新成功！' : '保存成功！');
         }
 
@@ -2587,6 +2610,131 @@
             document.getElementById('ocr-preview').classList.add('hidden');
             document.getElementById('ocr-result').classList.add('hidden');
         }
+
+        const danmakuMessages = [
+            '前方高能！',
+            'awsl！',
+            '太强了吧！',
+            '爷青回！',
+            '有内味儿了！',
+            '冲冲冲！',
+            '奥利给！',
+            '干就完了！',
+            '加油鸭！',
+            '你已经很棒了！',
+            '今天也要元气满满！',
+            '未来可期！',
+            '努力不会背叛你！',
+            '星光不问赶路人！',
+            '破茧成蝶！',
+            '逆风翻盘！',
+            '向阳而生！',
+            '满怀希望就会所向披靡！',
+            '人间值得，未来可期！',
+            '乾坤未定，你我皆是黑马！',
+            '今天的努力是明天的底气！',
+            '你的潜力远超想象！',
+            '每一步都算数！',
+            '坚持就是胜利！',
+            '星光不问赶路人，时光不负有心人！',
+            '生而为人，我很抱歉...才怪！',
+            '只要思想不滑坡，办法总比困难多！',
+            '遇事不决，量子力学！',
+            '我永远喜欢二次元！',
+            '此生无悔入二次元！',
+            '这波操作秀到我了！',
+            '神仙打架！',
+            '这也太强了吧！',
+            '大佬带我飞！',
+            '666666！',
+            '厉害了我的哥！',
+            '不愧是你！',
+            '太强了太强了！',
+            '我可以！',
+            '冲就完事了！',
+            '今天也要加油哦！(๑•̀ㅂ•́)و✧',
+            '元气满满！٩(ˊᗜˋ*)و',
+            '加油加油！(๑•̀ㅂ•́)و✧',
+            '奥利给！干就完了！',
+            '相信自己！你是最棒的！',
+            '努力终有回报！',
+            '不积跬步无以至千里！',
+            '每天进步一点点！',
+            '坚持就是胜利！(ง •_•)ง'
+        ];
+
+        let danmakuInterval = null;
+        let danmakuEnabled = false;
+
+        function toggleDanmaku() {
+            danmakuEnabled = !danmakuEnabled;
+            const btn = document.getElementById('danmaku-toggle-btn');
+            const container = document.getElementById('danmaku-container');
+            
+            if (danmakuEnabled) {
+                btn.innerHTML = '<i class="fa fa-heart"></i>';
+                btn.style.background = 'linear-gradient(135deg,#ff6b6b,#ee5a9b)';
+                btn.style.boxShadow = '0 8px 24px rgba(238,90,155,0.5), 0 0 20px rgba(255,107,107,0.3)';
+                container.classList.remove('hidden');
+                startDanmaku();
+            } else {
+                btn.innerHTML = '<i class="fa fa-comment"></i>';
+                btn.style.background = 'linear-gradient(135deg,#ff6b6b,#ee5a9b)';
+                btn.style.boxShadow = '0 8px 24px rgba(238,90,155,0.4)';
+                container.classList.add('hidden');
+                stopDanmaku();
+                document.getElementById('danmaku-items').innerHTML = '';
+            }
+        }
+
+        function startDanmaku() {
+            stopDanmaku();
+            danmakuInterval = setInterval(() => {
+                addDanmakuItem();
+            }, 1000 + Math.random() * 1000);
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => addDanmakuItem(), i * 300);
+            }
+        }
+
+        function stopDanmaku() {
+            if (danmakuInterval) {
+                clearInterval(danmakuInterval);
+                danmakuInterval = null;
+            }
+        }
+
+        function addDanmakuItem() {
+            const container = document.getElementById('danmaku-items');
+            const message = danmakuMessages[Math.floor(Math.random() * danmakuMessages.length)];
+            const colors = ['#ffffff', '#ffff00', '#00ff00', '#ff0000', '#ff00ff', '#00ffff', '#ffa500', '#ff69b4', '#ff4757', '#2ed573'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const fontSize = 14 + Math.random() * 8;
+            const speed = 5 + Math.random() * 5;
+            const top = Math.random() * 70 + 10;
+            
+            const item = document.createElement('div');
+            item.textContent = message;
+            item.style.cssText = `
+                position: absolute;
+                color: ${color};
+                font-size: ${fontSize}px;
+                font-weight: 700;
+                font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+                white-space: nowrap;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.8), 0 0 10px ${color};
+                animation: danmakuMove ${speed}s linear forwards;
+                opacity: 0;
+                top: ${top}%;
+                right: -450px;
+            `;
+            
+            container.appendChild(item);
+            
+            setTimeout(() => {
+                item.remove();
+            }, speed * 1000 + 500);
+        }
     </script>
 
     <div id="bet-modal" class="hidden">
@@ -2643,5 +2791,13 @@
             </div>
         </div>
     </div>
+
+    <div id="danmaku-container" class="hidden" style="position:fixed;top:0;left:0;right:0;height:12vh;pointer-events:none;z-index:9998;overflow:hidden;">
+        <div id="danmaku-items" style="position:absolute;top:0;left:0;right:0;bottom:0;"></div>
+    </div>
+
+    <button type="button" id="danmaku-toggle-btn" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ee5a9b);color:white;border:none;box-shadow:0 8px 24px rgba(238,90,155,0.4);font-size:24px;cursor:pointer;transition:all 0.3s;z-index:9999;" onclick="toggleDanmaku()">
+        <i class="fa fa-comment"></i>
+    </button>
 </body>
 </html>
