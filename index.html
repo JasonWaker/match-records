@@ -2527,18 +2527,67 @@
         async function parseBetImage(imageData) {
             try {
                 const { createWorker } = Tesseract;
-                const worker = await createWorker('chi_sim', 1, {
+                const worker = await createWorker('chi_sim+eng', 1, {
                     logger: m => console.log(m)
                 });
                 
-                const { data: { text } } = await worker.recognize(imageData);
+                await worker.setParameters({
+                    tessedit_pageseg_mode: '6',
+                    tessedit_char_whitelist: '0123456789.@+-大中小胜负平让球分半全场波胆VS年月日时分秒星期 ',
+                    preserve_interword_spaces: '1'
+                });
+                
+                const processedImage = await preprocessImage(imageData);
+                const { data: { text } } = await worker.recognize(processedImage || imageData);
                 await worker.terminate();
                 
+                console.log('OCR识别原始文本:', text);
                 return parseBetText(text);
             } catch (error) {
                 console.error('OCR识别失败:', error);
                 return parseBetText('');
             }
+        }
+
+        async function preprocessImage(imageData) {
+            return new Promise((resolve) => {
+                try {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        ctx.drawImage(img, 0, 0);
+                        
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const data = imageData.data;
+                        
+                        for (let i = 0; i < data.length; i += 4) {
+                            const r = data[i];
+                            const g = data[i + 1];
+                            const b = data[i + 2];
+                            const gray = (r * 0.299 + g * 0.587 + b * 0.114);
+                            
+                            const threshold = 180;
+                            const val = gray < threshold ? 0 : 255;
+                            
+                            data[i] = val;
+                            data[i + 1] = val;
+                            data[i + 2] = val;
+                        }
+                        
+                        ctx.putImageData(imageData, 0, 0);
+                        resolve(canvas.toDataURL('image/png'));
+                    };
+                    img.onerror = () => resolve(null);
+                    img.src = imageData;
+                } catch (e) {
+                    resolve(null);
+                }
+            });
         }
 
         function parseBetText(text) {
@@ -2632,16 +2681,35 @@
             const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             
             const dateRegex = /(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})[日号]?/;
+            const dateShortRegex = /(\d{2})[-/](\d{2})[-/](\d{2})/;
             const amountRegex = /投注额[：:]?\s*([\d.]+)/i;
             const returnRegex = /返还额[：:]?\s*([\d.]+)/i;
             const vsRegex = /(.+?)\s*[Vv][Ss]\s*(.+)/;
+            const betTypeRegex = /(大|小|让球|胜负|平|独赢|波胆|比分|半全场|总进球|角球|大小球)\s*[\d.]+@[\d.]+/;
+            const oddsRegex = /[\d.]+@[\d.]+/;
 
+            let vsLine = '';
+            
             for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
+                let line = lines[i];
                 
+                line = line.replace(/[【】]/g, '').replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
+                
+                if (line.length < 2) continue;
+
                 const dateMatch = line.match(dateRegex);
                 if (dateMatch && !result.date) {
                     result.date = `${dateMatch[1]}-${String(dateMatch[2]).padStart(2, '0')}-${String(dateMatch[3]).padStart(2, '0')}`;
+                }
+
+                const dateShortMatch = line.match(dateShortRegex);
+                if (dateShortMatch && !result.date) {
+                    const year = parseInt(dateShortMatch[1]);
+                    if (year < 50) {
+                        result.date = `20${dateShortMatch[1]}-${dateShortMatch[2]}-${dateShortMatch[3]}`;
+                    } else if (year >= 2000) {
+                        result.date = `${dateShortMatch[1]}-${dateShortMatch[2]}-${dateShortMatch[3]}`;
+                    }
                 }
 
                 const amountMatch = line.match(amountRegex);
@@ -2656,19 +2724,39 @@
 
                 const vsMatch = line.match(vsRegex);
                 if (vsMatch) {
-                    result.home = vsMatch[1].trim();
-                    result.away = vsMatch[2].trim();
+                    vsLine = line;
+                    let home = vsMatch[1].trim();
+                    let away = vsMatch[2].trim();
+                    
+                    home = home.replace(/^\s*[-+*/\\|#@$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]\s*/, '').trim();
+                    away = away.replace(/^\s*[-+*/\\|#@$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]\s*/, '').trim();
+                    
+                    if (home.length > 1 && away.length > 1) {
+                        result.home = home;
+                        result.away = away;
+                    }
                 }
 
-                if (line.includes('篮球') || line.includes('NBA') || line.includes('WNBA')) {
+                const betTypeMatch = line.match(betTypeRegex);
+                if (betTypeMatch) {
+                    result.betType = line.trim();
+                } else if (oddsRegex.test(line) && !result.betType) {
+                    result.betType = line.trim();
+                }
+
+                if (line.includes('篮球') || line.includes('NBA') || line.includes('WNBA') || line.includes('女篮')) {
                     result.sport = 'basketball';
-                } else if (line.includes('足球') || line.includes('联赛') || line.includes('友谊赛')) {
+                } else if (line.includes('足球') || line.includes('联赛') || line.includes('友谊赛') || line.includes('杯赛')) {
                     result.sport = 'football';
                 }
 
-                if (/[\d.]+@[\d.]+/.test(line)) {
-                    result.betType = line.trim();
+                if (line.includes('国际友谊赛') || line.includes('友谊赛') || line.includes('联赛')) {
+                    result.match = line.trim();
                 }
+            }
+
+            if (!result.match && result.home && result.away) {
+                result.match = `${result.home} VS ${result.away}`;
             }
 
             if (!result.date) {
