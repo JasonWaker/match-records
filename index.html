@@ -2601,6 +2601,9 @@
         }
 
         function fillFormWithOCR(data) {
+            document.getElementById('bet-amount').removeEventListener('input', calculateProfit);
+            document.getElementById('bet-return').removeEventListener('input', calculateProfit);
+            
             const amount = parseFloat(data.amount || '0');
             const returnAmount = parseFloat(data.returnAmount || '0');
             const profit = (returnAmount - amount).toFixed(2);
@@ -2617,6 +2620,9 @@
             setVal('bet-profit', profit);
             setVal('bet-result', result);
             setVal('bet-source', 'OCR识别');
+            
+            document.getElementById('bet-amount').addEventListener('input', calculateProfit);
+            document.getElementById('bet-return').addEventListener('input', calculateProfit);
             
             document.getElementById('ocr-result').classList.remove('hidden');
             document.getElementById('ocr-parsed-text').textContent = 
