@@ -350,89 +350,74 @@
         }
         
         async function login(email, password) {
-            const users = getStoredUsers();
-            const user = users.find(u => u.email === email && u.password === hashPassword(password));
-            
-            if (user) {
-                saveCurrentUser(user);
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 500);
-            } else {
+            try {
+                const response = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'login', email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    saveCurrentUser(data.user, data.session);
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 500);
+                } else {
+                    setLoading(false);
+                    showError(data.error || '登录失败');
+                }
+            } catch (error) {
                 setLoading(false);
-                showError('邮箱或密码错误');
+                console.error('Login error:', error);
+                showError('网络错误，请稍后重试');
             }
         }
         
         async function register(email, password) {
-            const users = getStoredUsers();
-            
-            if (users.find(u => u.email === email)) {
-                setLoading(false);
-                showError('该邮箱已被注册');
-                return;
-            }
-            
             if (password.length < 6) {
                 setLoading(false);
                 showError('密码至少需要6位');
                 return;
             }
             
-            const newUser = {
-                id: Date.now().toString(),
-                email: email,
-                password: hashPassword(password),
-                createdAt: new Date().toISOString(),
-                betData: []
-            };
-            
-            users.push(newUser);
-            saveUsers(users);
-            
-            setLoading(false);
-            showSuccess('注册成功，请登录');
-            toggleMode();
+            try {
+                const response = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'register', email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    setLoading(false);
+                    showSuccess('注册成功，请登录');
+                    toggleMode();
+                } else {
+                    setLoading(false);
+                    showError(data.error || '注册失败');
+                }
+            } catch (error) {
+                setLoading(false);
+                console.error('Register error:', error);
+                showError('网络错误，请稍后重试');
+            }
         }
         
         function forgotPassword() {
             const email = prompt('请输入您注册时使用的邮箱：');
             if (email) {
-                const users = getStoredUsers();
-                const user = users.find(u => u.email === email);
-                
-                if (user) {
-                    alert('密码重置链接已发送到您的邮箱！\n（演示模式：您的密码是原密码）');
-                } else {
-                    alert('该邮箱未注册');
-                }
+                alert('密码重置链接已发送到您的邮箱！\n（提示：在Supabase控制台中可以重置密码）');
             }
         }
         
-        function hashPassword(password) {
-            let hash = 0;
-            for (let i = 0; i < password.length; i++) {
-                const char = password.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
-            }
-            return hash.toString(16);
-        }
-        
-        function getStoredUsers() {
-            const users = localStorage.getItem('betUsers');
-            return users ? JSON.parse(users) : [];
-        }
-        
-        function saveUsers(users) {
-            localStorage.setItem('betUsers', JSON.stringify(users));
-        }
-        
-        function saveCurrentUser(user) {
+        function saveCurrentUser(user, session) {
             localStorage.setItem('currentUser', JSON.stringify({
                 id: user.id,
                 email: user.email,
-                token: generateToken()
+                token: session?.access_token || generateToken()
             }));
         }
         

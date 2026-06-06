@@ -1301,7 +1301,7 @@
             if (tab === 'ai-analysis') updateAnalysisSummary();
         }
 
-        function saveBetRecord(e) {
+        async function saveBetRecord(e) {
             e.preventDefault();
             const formData = getBetFormData();
             const wasEditing = editingRecordId !== null;
@@ -1310,10 +1310,10 @@
             } else {
                 betData.unshift({ ...formData, id: Date.now() });
             }
-            saveData();
+            await saveData();
             resetBetForm();
             closeBetModal();
-            loadData();
+            await loadData();
             filteredData = [...betData];
             chartFilteredData = [...betData];
             initChartDefaultDate();
@@ -1530,23 +1530,23 @@
             document.getElementById('cancel-edit-btn').classList.add('hidden');
         }
 
-        function deleteRecord(id) {
+        async function deleteRecord(id) {
             if (!confirm('确定删除？')) return;
             betData = betData.filter(r => r.id !== id);
             filteredData = filteredData.filter(r => r.id !== id);
             chartFilteredData = chartFilteredData.filter(r => r.id !== id);
             if (editingRecordId === id) resetBetForm();
-            saveData();
+            await saveData();
             initChartDefaultDate();
             renderAll();
         }
 
-        function clearAllData() {
+        async function clearAllData() {
             if (!confirm('确定清空所有投注数据？不可恢复！')) return;
             betData = [];
             filteredData = [];
             chartFilteredData = [];
-            saveData();
+            await saveData();
             initChartDefaultDate();
             renderAll();
         }
@@ -2435,7 +2435,7 @@
             }
         }
 
-        function applyImportedData(snapshot) {
+        async function applyImportedData(snapshot) {
             if (!Array.isArray(snapshot.betData)) {
                 alert('导入失败：没有找到投注记录数据。');
                 return;
@@ -2443,7 +2443,7 @@
             if (!confirm('导入会覆盖当前浏览器中的投注记录和预测历史，确定继续？')) return;
             betData = snapshot.betData.map(normalizeRecord).filter(Boolean);
             predictHistory = Array.isArray(snapshot.predictHistory) ? snapshot.predictHistory : [];
-            saveData();
+            await saveData();
             localStorage.setItem('predictHistory', JSON.stringify(predictHistory));
             resetBetForm();
             setVal('filter-start-date', '');
@@ -2526,43 +2526,80 @@
             return user ? JSON.parse(user).id : null;
         }
         
-        function saveData() { 
-            const userId = getCurrentUserId();
-            if (!userId) return;
-            
-            const users = getStoredUsers();
-            const userIndex = users.findIndex(u => u.id === userId);
-            if (userIndex !== -1) {
-                users[userIndex].betData = betData;
-                saveUsers(users);
-            }
-            localStorage.setItem('betData', JSON.stringify(betData));
+        function getAuthToken() {
+            const user = localStorage.getItem('currentUser');
+            return user ? JSON.parse(user).token : null;
         }
         
-        function loadData() {
+        async function saveData() { 
             const userId = getCurrentUserId();
-            if (userId) {
-                const users = getStoredUsers();
-                const user = users.find(u => u.id === userId);
-                if (user && user.betData) {
-                    betData = user.betData.map(r => ({ ...r, sport: normalizeSport(r.sport) }));
-                    localStorage.setItem('betData', JSON.stringify(betData));
-                    return;
+            const token = getAuthToken();
+            if (!userId || !token) return;
+            
+            localStorage.setItem('betData', JSON.stringify(betData));
+            
+            try {
+                for (const record of betData) {
+                    if (!record.synced) {
+                        await fetch('/api/matches', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                match_date: record.date,
+                                league: record.league,
+                                home_team: record.team1,
+                                away_team: record.team2,
+                                betting_amount: record.amount,
+                                odds: record.odds,
+                                result: record.result
+                            })
+                        });
+                        record.synced = true;
+                    }
+                }
+            } catch (error) {
+                console.error('Sync error:', error);
+            }
+        }
+        
+        async function loadData() {
+            const token = getAuthToken();
+            
+            if (token) {
+                try {
+                    const response = await fetch('/api/matches', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.matches) {
+                            betData = data.matches.map(m => ({
+                                id: m.id,
+                                date: m.match_date,
+                                league: m.league,
+                                team1: m.home_team,
+                                team2: m.away_team,
+                                amount: m.betting_amount,
+                                odds: m.odds,
+                                result: m.result,
+                                synced: true
+                            }));
+                            localStorage.setItem('betData', JSON.stringify(betData));
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Load error:', error);
                 }
             }
             
             const d = localStorage.getItem('betData');
             if (d) betData = JSON.parse(d);
             betData = betData.map(r => ({ ...r, sport: normalizeSport(r.sport) }));
-        }
-        
-        function getStoredUsers() {
-            const users = localStorage.getItem('betUsers');
-            return users ? JSON.parse(users) : [];
-        }
-        
-        function saveUsers(users) {
-            localStorage.setItem('betUsers', JSON.stringify(users));
         }
         
         function logout() {

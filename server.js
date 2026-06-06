@@ -4,11 +4,10 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const app = express();
-const PORT = 3000;
 
 const BAIDU_CONFIG = {
-    apiKey: 'gMci6lclkXHPdNddwEPSigbE',
-    secretKey: 'io1QJF8hHOTqulKxwtge5tOIBB9h9TDD'
+    apiKey: process.env.BAIDU_API_KEY || 'gMci6lclkXHPdNddwEPSigbE',
+    secretKey: process.env.BAIDU_SECRET_KEY || 'io1QJF8hHOTqulKxwtge5tOIBB9h9TDD'
 };
 
 let accessToken = '';
@@ -72,6 +71,4 @@ app.post('/api/ocr', async (req, res) => {
 
 app.use(express.static('.'));
 
-app.listen(PORT, () => {
-    console.log(`服务器运行在 http://localhost:${PORT}`);
-});
+module.exports = app;
