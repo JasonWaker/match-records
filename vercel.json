@@ -1,13 +1,14 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/auth.js", "use": "@vercel/node" },
-    { "src": "api/matches.js", "use": "@vercel/node" },
-    { "src": "api/statistics.js", "use": "@vercel/node" },
-    { "src": "api/strategies.js", "use": "@vercel/node" },
-    { "src": "api/ocr.js", "use": "@vercel/node" },
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "login.html", "use": "@vercel/static" }
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
     { "src": "/api/auth", "dest": "api/auth.js" },
@@ -15,7 +16,8 @@
     { "src": "/api/statistics", "dest": "api/statistics.js" },
     { "src": "/api/strategies", "dest": "api/strategies.js" },
     { "src": "/api/ocr", "dest": "api/ocr.js" },
+    { "src": "/login", "dest": "/login.html" },
     { "src": "/login.html", "dest": "/login.html" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/", "dest": "/index.html" }
   ]
 }
