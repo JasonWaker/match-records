@@ -357,6 +357,12 @@
                     body: JSON.stringify({ action: 'login', email, password })
                 });
                 
+                if (!response.ok) {
+                    setLoading(false);
+                    showError(`请求失败: ${response.status} ${response.statusText}`);
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 if (data.success) {

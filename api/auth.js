@@ -21,7 +21,7 @@ module.exports = async function handler(req, res) {
     }
   } catch (error) {
     console.error('Auth error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 };
 
